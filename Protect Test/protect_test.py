@@ -1,5 +1,6 @@
 import sublime, sublime_plugin
 from bs4 import BeautifulSoup
+import sys
 
 def idSelectors(testSoup): #testSoup is a BeautifulSoup object
 	testTableData = testSoup.find_all('td')
@@ -40,13 +41,24 @@ class ProtectTestCommand(sublime_plugin.TextCommand):
 		if file: #If we have a meta tag with a test attribute, look for the test file
 			try: 
 				testSoup = BeautifulSoup(open(testFile), "lxml")
+				fileMapping = {'filePath': testFile}
+				self.view.window().run_command("split_and_open", fileMapping)
 			except:
 				testSoup = False
 				print("There was an error locating the test file!")
+				e = sys.exc_info()[0]
+				print(e)
 				return
 		if testSoup: #Get all id selectors
 			idList = idSelectors(testSoup)
 			regions = getRegions(self.view, 'id', idList)
 			highlightRegions(self.view, regions)
 
+class SplitAndOpenCommand(sublime_plugin.WindowCommand):
+	def run(self, filePath):
+		self.window.run_command("set_layout",{"cols": [0.0, 0.5, 1.0],"rows": [0.0, 1.0],"cells": [[0, 0, 1, 1], [1, 0, 2, 1]]})
+		self.window.focus_group(1)
+		self.window.open_file(filePath)
+		#print(self.window.views())
+	
 
