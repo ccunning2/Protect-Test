@@ -1,0 +1,14 @@
+Relevant Sublime API Functions
+==============================
+
+sublime Module
+--------------
+yes_no_cancel_dialog(string, <yes_title>, <no_title>) 	int 	Displays a yes / no / cancel question dialog to the user. If yes_title and/or no_title are provided, they will be used as the text on the corresponding buttons on some platforms. Returns sublime.DIALOG_YES, sublime.DIALOG_NO or sublime.DIALOG_CANCEL. 
+
+sublime.View Class
+------------------
+yes_no_cancel_dialog(string, <yes_title>, <no_title>) 	int 	Displays a yes / no / cancel question dialog to the user. If yes_title and/or no_title are provided, they will be used as the text on the corresponding buttons on some platforms. Returns sublime.DIALOG_YES, sublime.DIALOG_NO or sublime.DIALOG_CANCEL. 
+
+
+
+sublime.log_commands(True) -- Logs all comands to console
