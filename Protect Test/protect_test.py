@@ -2,8 +2,13 @@ import sublime, sublime_plugin
 from bs4 import BeautifulSoup
 import sys
 
-def idSelectors(testSoup): #testSoup is a BeautifulSoup object
-	testTableData = testSoup.find_all('td')
+ID_REGIONS = []
+TEST_FILE = None
+TEST_SOUP = None
+EDIT_FILE = None
+
+def idSelectors(): #Retrieves all 'id' selectors from testfile. TEST_SOUP is a BeautifulSoup object
+	testTableData = TEST_SOUP.find_all('td')
 	idList = []
 	for data in testTableData:
 		if str(data.string).startswith('id',0,2):
@@ -20,45 +25,84 @@ def getRegions(view, selectorType, selectors): #Return an array of the regions t
 			regions.append(region)
 	return regions
 
+def getIDRegions(view):
+	global ID_REGIONS
+	idList = idSelectors()
+	ID_REGIONS = getRegions(view, 'id', idList)
+	highlightRegions(view, ID_REGIONS)
+
 def highlightRegions(view, regions):
 	view.add_regions('ThreatenedTestIDs', regions, "invalid", "", 0)
 
+def caretInRegion(region, caret_position):
+	start = region.a
+	end = region.b
+	position = caret_position.a
+	if position >= start and position <= end:
+		return True
+	else:
+		return False
+
+def caretInCriticalRegion(caret_position):
+	for region in ID_REGIONS:
+		if caretInRegion(region, caret_position):
+			print("True! Region: " + str(region))
+
 class ProtectTestCommand(sublime_plugin.TextCommand): 
 	def run(self, edit):
-		fileName = str(self.view.file_name())
+		global ID_REGIONS, TEST_FILE, TEST_SOUP, EDIT_FILE
+		EDIT_FILE = str(self.view.file_name())
 		try:
-			htmlSoup = BeautifulSoup(open(fileName), "lxml") #Open the html file
+			htmlSoup = BeautifulSoup(open(EDIT_FILE), "lxml") #Open the html file
 		except:
 			print("There was an error opening the test file")
 			return
 		try:
-			testFile = htmlSoup.meta['test'] #Look for html tag specifying location of test file, if applicable
-			file = True
+			TEST_FILE = htmlSoup.meta['test'] #Look for html tag specifying location of test file, if applicable
 		except KeyError:
-			testFile = "ERROR: No test file identified." 
-			file = False
+			sublime.message_dialog("ERROR:No test file to open!")
+			TEST_FILE = None
+			return
+		except TypeError:
+			sublime.message_dialog("ERROR:No test file to open!")
+			TEST_FILE = None
+			return
 
-		if file: #If we have a meta tag with a test attribute, look for the test file
+		if TEST_FILE: #If we have a meta tag with a test attribute, look for the test file
 			try: 
-				testSoup = BeautifulSoup(open(testFile), "lxml")
-				fileMapping = {'filePath': testFile}
+				TEST_SOUP = BeautifulSoup(open(TEST_FILE), "lxml")
+				fileMapping = {'filePath': TEST_FILE}
 				self.view.window().run_command("split_and_open", fileMapping)
 			except:
-				testSoup = False
+				TEST_SOUP = False
 				print("There was an error locating the test file!")
 				e = sys.exc_info()[0]
 				print(e)
 				return
-		if testSoup: #Get all id selectors
-			idList = idSelectors(testSoup)
-			regions = getRegions(self.view, 'id', idList)
-			highlightRegions(self.view, regions)
+		if TEST_SOUP: #Get all id selectors
+			getIDRegions(self.view)
 
 class SplitAndOpenCommand(sublime_plugin.WindowCommand):
 	def run(self, filePath):
 		self.window.run_command("set_layout",{"cols": [0.0, 0.5, 1.0],"rows": [0.0, 1.0],"cells": [[0, 0, 1, 1], [1, 0, 2, 1]]})
 		self.window.focus_group(1)
 		self.window.open_file(filePath)
-		#print(self.window.views())
-	
+		
+class IDSelectorListener(sublime_plugin.EventListener):
+	def on_selection_modified_async(self, view):
+		if TEST_FILE and (EDIT_FILE == str(view.file_name())):
+			if len(ID_REGIONS) > 0:
+				print(ID_REGIONS)
+				caret_position = view.sel()[0]
+				caretInCriticalRegion(caret_position)
+			else:
+				print("Empty!")
+				print("File is " + str(TEST_FILE))
+				print("testSoup is " + str(TEST_SOUP != None))
+				pass
 
+	def on_modified_async(self,view):
+		if TEST_FILE and (EDIT_FILE == str(view.file_name())):
+			getIDRegions(view)
+		else:
+			pass
