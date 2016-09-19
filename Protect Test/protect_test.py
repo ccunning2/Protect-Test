@@ -6,6 +6,7 @@ ID_REGIONS = []
 TEST_FILE = None
 TEST_SOUP = None
 EDIT_FILE = None
+CRITICAL_BREACH = False
 
 def idSelectors(): #Retrieves all 'id' selectors from testfile. TEST_SOUP is a BeautifulSoup object
 	testTableData = TEST_SOUP.find_all('td')
@@ -20,7 +21,7 @@ def getRegions(view, selectorType, selectors): #Return an array of the regions t
 	for selector in selectors:
 		searchString = selectorType + "=" + "\"" + selector + "\""
 		print(searchString)
-		selectorRegions = view.find_all(searchString)
+		selectorRegions = view.find_all(searchString) # add 'ignore case' flag
 		for region in selectorRegions:
 			regions.append(region)
 	return regions
@@ -43,10 +44,20 @@ def caretInRegion(region, caret_position):
 	else:
 		return False
 
-def caretInCriticalRegion(caret_position):
+def caretBreachedCriticalRegion(caret_position): #If returns true, we have entered and exited a critical region
+	global CRITICAL_BREACH
+	trigger = False
 	for region in ID_REGIONS:
-		if caretInRegion(region, caret_position):
-			print("True! Region: " + str(region))
+		status = caretInRegion(region, caret_position)
+		print(str(region))
+		if status:
+			CRITICAL_BREACH = True
+		elif CRITICAL_BREACH and not status:
+			CRITICAL_BREACH = False
+			trigger = True
+		else:
+			CRITICAL_BREACH = False
+	return trigger
 
 class ProtectTestCommand(sublime_plugin.TextCommand): 
 	def run(self, edit):
@@ -89,19 +100,21 @@ class SplitAndOpenCommand(sublime_plugin.WindowCommand):
 		self.window.open_file(filePath)
 		
 class IDSelectorListener(sublime_plugin.EventListener):
-	def on_selection_modified_async(self, view):
+	def on_selection_modified(self, view): #Triggered anytime the cursor moves or edit window is clicked
 		if TEST_FILE and (EDIT_FILE == str(view.file_name())):
 			if len(ID_REGIONS) > 0:
 				print(ID_REGIONS)
+				print("Critical Breach is: " + str(CRITICAL_BREACH))
 				caret_position = view.sel()[0]
-				caretInCriticalRegion(caret_position)
+				if caretBreachedCriticalRegion(caret_position) == True:
+					print("Trigger Event!!")
 			else:
 				print("Empty!")
 				print("File is " + str(TEST_FILE))
 				print("testSoup is " + str(TEST_SOUP != None))
 				pass
 
-	def on_modified_async(self,view):
+	def on_modified_async(self,view):#Each time the buffer changes due to added character
 		if TEST_FILE and (EDIT_FILE == str(view.file_name())):
 			getIDRegions(view)
 		else:
