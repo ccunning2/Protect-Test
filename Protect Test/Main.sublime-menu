@@ -1,0 +1,17 @@
+[
+	{
+		"id" : "tools",
+		"children":
+		[
+			{
+				"caption" : "-"
+			},
+			{
+				"caption" : "Protect Test", "command": "protect_test"
+			},
+			{
+				"caption" : "-"
+			}
+		]
+	}
+]

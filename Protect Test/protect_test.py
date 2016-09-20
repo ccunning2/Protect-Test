@@ -6,7 +6,7 @@ ID_REGIONS = []
 TEST_FILE = None
 TEST_SOUP = None
 EDIT_FILE = None
-CRITICAL_BREACH = False
+LISTEN = True
 
 def idSelectors(): #Retrieves all 'id' selectors from testfile. TEST_SOUP is a BeautifulSoup object
 	testTableData = TEST_SOUP.find_all('td')
@@ -23,7 +23,8 @@ def getRegions(view, selectorType, selectors): #Return an array of the regions t
 		print(searchString)
 		selectorRegions = view.find_all(searchString) # add 'ignore case' flag
 		for region in selectorRegions:
-			regions.append(region)
+			critRegion = CriticalRegion(region, view)
+			regions.append(critRegion)
 	return regions
 
 def getIDRegions(view):
@@ -33,31 +34,54 @@ def getIDRegions(view):
 	highlightRegions(view, ID_REGIONS)
 
 def highlightRegions(view, regions):
-	view.add_regions('ThreatenedTestIDs', regions, "invalid", "", 0)
+	regionList = []
+	for region in regions:
+		regionList.append(region.getRegion())
+	view.add_regions('ThreatenedTestIDs', regionList, "invalid", "", 0)
 
 def caretInRegion(region, caret_position):
-	start = region.a
-	end = region.b
+	start = region.getRegion().a
+	end = region.getRegion().b
 	position = caret_position.a
 	if position >= start and position <= end:
 		return True
 	else:
 		return False
 
-def caretBreachedCriticalRegion(caret_position): #If returns true, we have entered and exited a critical region
-	global CRITICAL_BREACH
-	trigger = False
+def caretBreachedCriticalRegion(caret_position, view): #If returns true, we have entered and exited a critical region
+	global LISTEN
 	for region in ID_REGIONS:
-		status = caretInRegion(region, caret_position)
-		print(str(region))
-		if status:
-			CRITICAL_BREACH = True
-		elif CRITICAL_BREACH and not status:
-			CRITICAL_BREACH = False
-			trigger = True
-		else:
-			CRITICAL_BREACH = False
-	return trigger
+		if caretInRegion(region, caret_position):
+			region.breach()
+			LISTEN = False
+		if not caretInRegion(region, caret_position) and region.beenBreached():
+			if region.getText() != view.substr(region.getRegion()):
+				print("CHANGE!!!")
+				sublime.message_dialog("You just made a change that will potentially break your test file!")
+			region.reset()
+			return True
+	return False
+
+class CriticalRegion:
+	def __init__(self, region, view):
+		self.region = region
+		self.text = view.substr(region)
+		self.breached = False
+
+	def breach(self):
+		self.breached = True
+
+	def reset(self):
+		self.breached = False
+
+	def beenBreached(self):
+		return self.breached
+
+	def getRegion(self):
+		return self.region
+
+	def getText(self):
+		return self.text
 
 class ProtectTestCommand(sublime_plugin.TextCommand): 
 	def run(self, edit):
@@ -100,22 +124,18 @@ class SplitAndOpenCommand(sublime_plugin.WindowCommand):
 		self.window.open_file(filePath)
 		
 class IDSelectorListener(sublime_plugin.EventListener):
-	def on_selection_modified(self, view): #Triggered anytime the cursor moves or edit window is clicked
+	def on_selection_modified_async(self, view): #Triggered anytime the cursor moves or edit window is clicked
 		if TEST_FILE and (EDIT_FILE == str(view.file_name())):
 			if len(ID_REGIONS) > 0:
 				print(ID_REGIONS)
-				print("Critical Breach is: " + str(CRITICAL_BREACH))
 				caret_position = view.sel()[0]
-				if caretBreachedCriticalRegion(caret_position) == True:
+				if caretBreachedCriticalRegion(caret_position, view) == True:
 					print("Trigger Event!!")
 			else:
-				print("Empty!")
-				print("File is " + str(TEST_FILE))
-				print("testSoup is " + str(TEST_SOUP != None))
 				pass
 
 	def on_modified_async(self,view):#Each time the buffer changes due to added character
-		if TEST_FILE and (EDIT_FILE == str(view.file_name())):
+		if TEST_FILE and (EDIT_FILE == str(view.file_name())) and LISTEN:
 			getIDRegions(view)
 		else:
 			pass
