@@ -1,12 +1,18 @@
 import sublime, sublime_plugin
 from bs4 import BeautifulSoup
+from lxml import etree as ET
 import sys
 
 ID_REGIONS = []
+NODE_REGIONS = []
 TEST_FILE = None
 TEST_SOUP = None
 EDIT_FILE = None
 LISTEN = True
+
+def getTree(file_name): #Returns parse tree via lxmlimport(For use with XPath tasks)
+	print(file_name)
+	return ET.parse(file_name)
 
 def idSelectors(): #Retrieves all 'id' selectors from testfile. TEST_SOUP is a BeautifulSoup object
 	testTableData = TEST_SOUP.find_all('td')
@@ -15,6 +21,22 @@ def idSelectors(): #Retrieves all 'id' selectors from testfile. TEST_SOUP is a B
 		if str(data.string).startswith('id',0,2):
 			idList.append(data.string[3:]) #In a selector 'id=something, the something begins at position 3'
 	return idList
+
+def nodeSelectors(): #Retrieves all Xpath selectors from testfile
+	rows = TEST_SOUP.find_all('tr')
+	xpathList = []
+	#Get rid of first two rows
+	rows.pop(0)
+	rows.pop(0)
+	for row in rows:
+		xpathList.append(row.td.next_sibling.next_sibling.string)
+	return xpathList
+
+
+def getRegionByLines(line1, line2, view): #Returns the legion starting at the beginning of line1 and the end of line 2 
+	a = view.text_point(line1-1, 0)
+	lastCol = view.line(view.text_point(line2-1, 0)).b
+	return sublime.Region(a, lastCol)
 
 def getRegions(view, selectorType, selectors): #Return an array of the regions to be highlighted
 	regions = []
@@ -26,6 +48,26 @@ def getRegions(view, selectorType, selectors): #Return an array of the regions t
 			critRegion = CriticalRegion(region, view)
 			regions.append(critRegion)
 	return regions
+
+def getXpathRegions(view, nodeList):
+	global NODE_REGIONS
+	NODE_REGIONS = [] #Clear Node Regions
+	#Construct lxml etree
+	etree = getTree(EDIT_FILE)
+	for selector in nodeList:
+		#get element
+		element = etree.xpath(selector)[0]
+		beginLine = element.sourceline
+		endLine = element.getnext().sourceline - 1
+		region = getRegionByLines(beginLine,  endLine, view)
+		NODE_REGIONS.append(CriticalRegion(region,view))
+
+
+def getNodeRegions(view):
+	nodeList = nodeSelectors()
+	print(nodeList)
+	getXpathRegions(view, nodeList)
+	highlightRegions(view, NODE_REGIONS)
 
 def getIDRegions(view):
 	global ID_REGIONS
@@ -50,8 +92,9 @@ def caretInRegion(region, caret_position):
 
 def caretBreachedCriticalRegion(caret_position, view): #If returns true, we have entered and exited a critical region
 	global LISTEN
-	for region in ID_REGIONS:
+	for region in NODE_REGIONS:
 		if caretInRegion(region, caret_position):
+			print("Region Breach!\n")
 			region.breach()
 			LISTEN = False
 		if not caretInRegion(region, caret_position) and region.beenBreached():
@@ -85,7 +128,7 @@ class CriticalRegion:
 
 class ProtectTestCommand(sublime_plugin.TextCommand): 
 	def run(self, edit):
-		global ID_REGIONS, TEST_FILE, TEST_SOUP, EDIT_FILE
+		global ID_REGIONS, TEST_FILE, TEST_SOUP, EDIT_FILE, NODE_REGIONS
 		EDIT_FILE = str(self.view.file_name())
 		try:
 			htmlSoup = BeautifulSoup(open(EDIT_FILE), "lxml") #Open the html file
@@ -107,7 +150,7 @@ class ProtectTestCommand(sublime_plugin.TextCommand):
 			try: 
 				TEST_SOUP = BeautifulSoup(open(TEST_FILE), "lxml")
 				fileMapping = {'filePath': TEST_FILE}
-				self.view.window().run_command("split_and_open", fileMapping)
+				#self.view.window().run_command("split_and_open", fileMapping)
 			except:
 				TEST_SOUP = False
 				print("There was an error locating the test file!")
@@ -115,9 +158,10 @@ class ProtectTestCommand(sublime_plugin.TextCommand):
 				print(e)
 				return
 		if TEST_SOUP: #Get all id selectors
-			getIDRegions(self.view)
+			#getIDRegions(self.view) 
+			getNodeRegions(self.view)
 
-class SplitAndOpenCommand(sublime_plugin.WindowCommand):
+class SplitAndOpenCommand(sublime_plugin.WindowCommand):#This just creates a split-pane view with test/under_test
 	def run(self, filePath):
 		self.window.run_command("set_layout",{"cols": [0.0, 0.5, 1.0],"rows": [0.0, 1.0],"cells": [[0, 0, 1, 1], [1, 0, 2, 1]]})
 		self.window.focus_group(1)
@@ -126,8 +170,8 @@ class SplitAndOpenCommand(sublime_plugin.WindowCommand):
 class IDSelectorListener(sublime_plugin.EventListener):
 	def on_selection_modified_async(self, view): #Triggered anytime the cursor moves or edit window is clicked
 		if TEST_FILE and (EDIT_FILE == str(view.file_name())):
-			if len(ID_REGIONS) > 0:
-				print(ID_REGIONS)
+			if len(NODE_REGIONS) > 0:
+				#print(NODE_REGIONS)
 				caret_position = view.sel()[0]
 				if caretBreachedCriticalRegion(caret_position, view) == True:
 					print("Trigger Event!!")
@@ -136,6 +180,6 @@ class IDSelectorListener(sublime_plugin.EventListener):
 
 	def on_modified_async(self,view):#Each time the buffer changes due to added character
 		if TEST_FILE and (EDIT_FILE == str(view.file_name())) and LISTEN:
-			getIDRegions(view)
+			getNodeRegions(view)
 		else:
 			pass
