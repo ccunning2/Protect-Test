@@ -10,9 +10,18 @@ TEST_SOUP = None
 EDIT_FILE = None
 LISTEN = True
 
-def getTree(file_name): #Returns parse tree via lxmlimport(For use with XPath tasks)
-	print(file_name)
-	return ET.parse(file_name)
+def printRegionInfo(): #To print critical region information for debugging
+	for crit_region in NODE_REGIONS:
+		print(str(crit_region.region.a) + " thru " + str(crit_region.region.b))
+	print('--------------\n')
+
+def printStatusOfEverything(view):
+	print("Listen is: " + str(LISTEN) + "\n")
+	print("Cursor is at: " + str(view.sel()[0].a) + "\n")
+	printRegionInfo()
+
+def getTree(view): #Returns parse tree via lxmlimport(For use with XPath tasks)
+	return ET.fromstring(view.substr(sublime.Region(0, view.size())))
 
 def idSelectors(): #Retrieves all 'id' selectors from testfile. TEST_SOUP is a BeautifulSoup object
 	testTableData = TEST_SOUP.find_all('td')
@@ -53,7 +62,7 @@ def getXpathRegions(view, nodeList):
 	global NODE_REGIONS
 	NODE_REGIONS = [] #Clear Node Regions
 	#Construct lxml etree
-	etree = getTree(EDIT_FILE)
+	etree = getTree(view)
 	for selector in nodeList:
 		#get element
 		element = etree.xpath(selector)[0]
@@ -76,10 +85,11 @@ def getIDRegions(view):
 	highlightRegions(view, ID_REGIONS)
 
 def highlightRegions(view, regions):
+	print("Highlighting Regions (79)\n")
 	regionList = []
 	for region in regions:
 		regionList.append(region.getRegion())
-	view.add_regions('ThreatenedTestIDs', regionList, "invalid", "", 0)
+	view.add_regions('CritRegions', regionList, "invalid", "", 0)
 
 def caretInRegion(region, caret_position):
 	start = region.getRegion().a
@@ -101,7 +111,8 @@ def caretBreachedCriticalRegion(caret_position, view): #If returns true, we have
 			if region.getText() != view.substr(region.getRegion()):
 				print("CHANGE!!!")
 				sublime.message_dialog("You just made a change that will potentially break your test file!")
-			region.reset()
+			region.reset() #Modify this to reset region text?
+			LISTEN = True #Resume listening
 			return True
 	return False
 
@@ -134,6 +145,8 @@ class ProtectTestCommand(sublime_plugin.TextCommand):
 			htmlSoup = BeautifulSoup(open(EDIT_FILE), "lxml") #Open the html file
 		except:
 			print("There was an error opening the test file")
+			e = sys.exc_info()[0]
+			print(e)
 			return
 		try:
 			TEST_FILE = htmlSoup.meta['test'] #Look for html tag specifying location of test file, if applicable
@@ -150,7 +163,7 @@ class ProtectTestCommand(sublime_plugin.TextCommand):
 			try: 
 				TEST_SOUP = BeautifulSoup(open(TEST_FILE), "lxml")
 				fileMapping = {'filePath': TEST_FILE}
-				#self.view.window().run_command("split_and_open", fileMapping)
+				# self.view.window().run_command("split_and_open", fileMapping)
 			except:
 				TEST_SOUP = False
 				print("There was an error locating the test file!")
@@ -158,7 +171,7 @@ class ProtectTestCommand(sublime_plugin.TextCommand):
 				print(e)
 				return
 		if TEST_SOUP: #Get all id selectors
-			#getIDRegions(self.view) 
+			#getIDRegions(self.view) #This was used in attribute-based region identification
 			getNodeRegions(self.view)
 
 class SplitAndOpenCommand(sublime_plugin.WindowCommand):#This just creates a split-pane view with test/under_test
@@ -172,6 +185,7 @@ class IDSelectorListener(sublime_plugin.EventListener):
 		if TEST_FILE and (EDIT_FILE == str(view.file_name())):
 			if len(NODE_REGIONS) > 0:
 				#print(NODE_REGIONS)
+				printStatusOfEverything(view)
 				caret_position = view.sel()[0]
 				if caretBreachedCriticalRegion(caret_position, view) == True:
 					print("Trigger Event!!")
@@ -179,7 +193,10 @@ class IDSelectorListener(sublime_plugin.EventListener):
 				pass
 
 	def on_modified_async(self,view):#Each time the buffer changes due to added character
+		global NODE_REGIONS
 		if TEST_FILE and (EDIT_FILE == str(view.file_name())) and LISTEN:
+			NODE_REGIONS = []
+			print("**Resetting Node Regions**\n")
 			getNodeRegions(view)
 		else:
 			pass
