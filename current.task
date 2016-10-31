@@ -1,0 +1,3 @@
+Structure-based locator breakages
+---------------------------------
+-Harmful Atomic Edit -> Changing an element's type, changing an element's body
