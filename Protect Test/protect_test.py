@@ -12,7 +12,7 @@ LISTEN = True
 
 def printRegionInfo(): #To print critical region information for debugging
 	for crit_region in NODE_REGIONS:
-		print(str(crit_region.region.a) + " thru " + str(crit_region.region.b))
+		print("Region locator: " + str(crit_region.getTest().getLocator()) + " Region:" + str(crit_region.region.a) + " thru " + str(crit_region.region.b))
 	print('--------------\n')
 
 def printStatusOfEverything(view):
@@ -31,15 +31,19 @@ def idSelectors(): #Retrieves all 'id' selectors from testfile. TEST_SOUP is a B
 			idList.append(data.string[3:]) #In a selector 'id=something, the something begins at position 3'
 	return idList
 
-def nodeSelectors(): #Retrieves all Xpath selectors from testfile
+def buildTestData(): #Retrieves all test data from testfile
 	rows = TEST_SOUP.find_all('tr')
-	xpathList = []
+	testList = []
 	#Get rid of first two rows
 	rows.pop(0)
 	rows.pop(0)
 	for row in rows:
-		xpathList.append(row.td.next_sibling.next_sibling.string)
-	return xpathList
+		tempData = row.find_all('td')
+		testData = SeleniumTestData(tempData[0].text)
+		testData.setLocator(tempData[1].text)
+		testData.setText(tempData[2].text)
+		testList.append(testData)
+	return testList
 
 
 def getRegionByLines(line1, line2, view): #Returns the legion starting at the beginning of line1 and the end of line 2 
@@ -58,24 +62,24 @@ def getRegions(view, selectorType, selectors): #Return an array of the regions t
 			regions.append(critRegion)
 	return regions
 
-def getXpathRegions(view, nodeList):
+def getXpathRegions(view, testList):
 	global NODE_REGIONS
 	NODE_REGIONS = [] #Clear Node Regions
 	#Construct lxml etree
 	etree = getTree(view)
-	for selector in nodeList:
+	for test in testList:
 		#get element
-		element = etree.xpath(selector)[0]
+		element = etree.xpath(test.getLocator())[0]
 		beginLine = element.sourceline
 		endLine = element.getnext().sourceline - 1
 		region = getRegionByLines(beginLine,  endLine, view)
-		NODE_REGIONS.append(CriticalRegion(region,view))
+		NODE_REGIONS.append(CriticalRegion(region,test,view))
 
 
 def getNodeRegions(view):
-	nodeList = nodeSelectors()
-	print(nodeList)
-	getXpathRegions(view, nodeList)
+	testList = buildTestData()
+	print(testList)
+	getXpathRegions(view, testList)
 	highlightRegions(view, NODE_REGIONS)
 
 def getIDRegions(view):
@@ -85,7 +89,7 @@ def getIDRegions(view):
 	highlightRegions(view, ID_REGIONS)
 
 def highlightRegions(view, regions):
-	print("Highlighting Regions (79)\n")
+	print("Highlighting Regions\n")
 	regionList = []
 	for region in regions:
 		regionList.append(region.getRegion())
@@ -116,11 +120,33 @@ def caretBreachedCriticalRegion(caret_position, view): #If returns true, we have
 			return True
 	return False
 
+class SeleniumTestData:
+	def __init__(self, test):
+		self.test = test
+		self.locator = ""
+		self.text = ""
+
+	def getTest(self):
+		return self.test
+
+	def getLocator(self):
+		return self.locator
+
+	def getText(self):
+		return self.text
+
+	def setLocator(self, locator):
+		self.locator = locator
+
+	def setText(self, text):
+		self.text = text
+
 class CriticalRegion:
-	def __init__(self, region, view):
+	def __init__(self, region, test, view):
 		self.region = region
 		self.text = view.substr(region)
 		self.breached = False
+		self.test = test
 
 	def breach(self):
 		self.breached = True
@@ -136,6 +162,9 @@ class CriticalRegion:
 
 	def getText(self):
 		return self.text
+
+	def getTest(self):
+		return self.test
 
 class ProtectTestCommand(sublime_plugin.TextCommand): 
 	def run(self, edit):
