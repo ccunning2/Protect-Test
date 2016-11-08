@@ -10,10 +10,21 @@ TEST_SOUP = None
 EDIT_FILE = None
 LISTEN = True
 
+def getTestHtml(crit_region):
+	test = crit_region.test
+	html = "<html><body><h3>Test Info:</h3><ul><li>Test Type: " + test.test + "</li><li>Test Locator: " + test.locator + "</li></ul></body></html>"
+	return html
+
 def printRegionInfo(): #To print critical region information for debugging
 	for crit_region in NODE_REGIONS:
 		print("Region locator: " + str(crit_region.getTest().getLocator()) + " Region:" + str(crit_region.region.a) + " thru " + str(crit_region.region.b))
 	print('--------------\n')
+
+def pointInCriticalRegion(point, view):
+	for crit_region in NODE_REGIONS:
+		if crit_region.region.contains(point):
+			print("Hovering over critical region")
+			view.show_popup(getTestHtml(crit_region), sublime.HIDE_ON_MOUSE_MOVE_AWAY, point, 700,700,None,None)
 
 def printStatusOfEverything(view):
 	print("Listen is: " + str(LISTEN) + "\n")
@@ -229,3 +240,8 @@ class IDSelectorListener(sublime_plugin.EventListener):
 			getNodeRegions(view)
 		else:
 			pass
+
+class HoverListener(sublime_plugin.ViewEventListener):
+	def on_hover(self,point, hover_zone):
+		if hover_zone == sublime.HOVER_TEXT:
+			pointInCriticalRegion(point, self.view)
