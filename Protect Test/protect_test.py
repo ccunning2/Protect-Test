@@ -12,7 +12,8 @@ LISTEN = True
 
 def getTestHtml(crit_region):
 	test = crit_region.test
-	html = "<html><body><h3>Test Info:</h3><ul><li>Test Type: " + test.test + "</li><li>Test Locator: " + test.locator + "</li></ul></body></html>"
+	modified = str(crit_region.modified)
+	html = "<html><body><h3>Test Info:</h3><ul><li>Test Type: " + test.test + "</li><li>Test Locator: " + test.locator + "</li><li>Modified: " + modified + "</ul></body></html>"
 	return html
 
 def printRegionInfo(): #To print critical region information for debugging
@@ -125,6 +126,7 @@ def caretBreachedCriticalRegion(caret_position, view): #If returns true, we have
 		if not caretInRegion(region, caret_position) and region.beenBreached():
 			if region.getText() != view.substr(region.getRegion()):
 				print("CHANGE!!!")
+				region.modified = True
 				sublime.message_dialog("You just made a change that will potentially break your test file!")
 			region.reset() #Modify this to reset region text?
 			LISTEN = True #Resume listening
@@ -158,6 +160,7 @@ class CriticalRegion:
 		self.text = view.substr(region)
 		self.breached = False
 		self.test = test
+		self.modified = False
 
 	def breach(self):
 		self.breached = True
