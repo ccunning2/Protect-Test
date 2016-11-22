@@ -1,6 +1,7 @@
 import sublime, sublime_plugin
 from bs4 import BeautifulSoup
 from lxml import etree as ET
+from lxml.html import document_fromstring
 import sys
 
 ID_REGIONS = []
@@ -9,6 +10,9 @@ TEST_FILE = None
 TEST_SOUP = None
 EDIT_FILE = None
 LISTEN = True
+
+ORIGINAL_FORM = None
+ELEMENTS_WARNED = []
 
 def getTestHtml(crit_region):
 	test = crit_region.test
@@ -34,6 +38,9 @@ def printStatusOfEverything(view):
 
 def getTree(view): #Returns parse tree via lxmlimport(For use with XPath tasks)
 	return ET.fromstring(view.substr(sublime.Region(0, view.size())))
+
+def getDocument(view):
+	return document_fromstring(view.substr(sublime.Region(0, view.size())))
 
 def idSelectors(): #Retrieves all 'id' selectors from testfile. TEST_SOUP is a BeautifulSoup object
 	testTableData = TEST_SOUP.find_all('td')
@@ -78,15 +85,75 @@ def getXpathRegions(view, testList):
 	global NODE_REGIONS
 	NODE_REGIONS = [] #Clear Node Regions
 	#Construct lxml etree
-	etree = getTree(view)
+	try:
+		etree = getTree(view)
+	except IndexError:
+		print("EDITING IS HAPPENING")
+		return
+	except:
+		e = sys.exc_info()[0]
+		print(e)
 	for test in testList:
-		#get element
-		element = etree.xpath(test.getLocator())[0]
-		beginLine = element.sourceline
-		endLine = element.getnext().sourceline - 1
-		region = getRegionByLines(beginLine,  endLine, view)
-		NODE_REGIONS.append(CriticalRegion(region,test,view))
+		if test.test == "clickAndWait":
+			print('CLICK_N_WAIT')
+			document = getDocument(view)
+			try:
+				processForm(test.locator, document)
+			except IndexError:
+				print("Invalid Syntax, skipping for now")
+				return
+		else:
+			#get element
+			element = etree.xpath(test.getLocator())[0]
+			beginLine = element.sourceline
+			endLine = element.getnext().sourceline - 1
+			region = getRegionByLines(beginLine,  endLine, view)
+			NODE_REGIONS.append(CriticalRegion(region,test,view))
 
+def processForm(XPathLocator, tree):
+	global ORIGINAL_FORM
+	formElement = None
+	button = tree.xpath(XPathLocator)[0]
+	it = button.iterancestors()
+	for element in it:
+		if element.tag == "form":
+			if ORIGINAL_FORM is None:
+				ORIGINAL_FORM = buildFormList(element)
+			else:
+				formElement = buildFormList(element)
+			break
+	if ORIGINAL_FORM is None and formElement is None:
+		print('Input has no form parent!!')
+	if formElement is not None:
+		print("formElement is: " + str(formElement))
+		compareForms(formElement) 
+	else:
+		print("No formElement")
+	if ORIGINAL_FORM is not None:
+		print("ORIGINAL_FORM is: " + str(ORIGINAL_FORM))
+	else:
+		print("No ORIGINAL_FORM")
+	
+def buildFormList(element): #Takes a form element, builds list of xpath locators to elements with 'required'
+	set = element.findall('.//input[@required]')
+	tree = element.getroottree()
+	requiredList = []
+	for el in set:
+		requiredList.append(tree.getpath(el))
+	return requiredList
+
+def compareForms(list1):
+	global ORIGINAL_FORM
+	# if len(list1) < len(ORIGINAL_FORM):
+	for selector in ORIGINAL_FORM:
+		if selector not in list1 and selector not in ELEMENTS_WARNED:
+			sublime.message_dialog("You just removed a required field. This will break your test unless you modify it.")
+			ELEMENTS_WARNED.append(selector)
+	for selector in list1:
+		if selector not in ORIGINAL_FORM and selector not in ELEMENTS_WARNED:
+			print("ALERT-- New Required Field")
+			sublime.message_dialog("You just added a required field that will break your test unless you modify it.")
+			ELEMENTS_WARNED.append(selector)
 
 def getNodeRegions(view):
 	testList = buildTestData()
