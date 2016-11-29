@@ -1,0 +1,11 @@
+#Module for global variables
+ID_REGIONS = []
+NODE_REGIONS = []
+TEST_FILE = None
+TEST_SOUP = None
+EDIT_FILE = None
+LISTEN = True
+CRITICAL_SELECTORS = []
+
+ORIGINAL_FORM = None
+ELEMENTS_WARNED = []
