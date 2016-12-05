@@ -9,4 +9,4 @@ def printRegionInfo(): #To print critical region information for debugging
 def printStatusOfEverything(view):
 	print("Listen is: " + str(globals.LISTEN) + "\n")
 	print("Cursor is at: " + str(view.sel()[0].a) + "\n")
-	printRegionInfo()
+	#printRegionInfo()

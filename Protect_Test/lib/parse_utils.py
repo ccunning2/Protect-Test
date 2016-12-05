@@ -4,8 +4,8 @@ from lxml.html import parse as HTMLParse
 from . import globals
 import sublime
 
-# def getTree(view): #Returns parse tree via lxmlimport(For use with XPath tasks)
-# 	return ET.fromstring(view.substr(sublime.Region(0, view.size())))
+def getTree(view): #Returns parse tree via lxmlimport(For use with XPath tasks)
+	return ET.fromstring(view.substr(sublime.Region(0, view.size())))
 
 def getViewTree(view): #Same as getTree?
 	return document_fromstring(view.substr(sublime.Region(0, view.size())))

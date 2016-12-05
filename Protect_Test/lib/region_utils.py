@@ -59,9 +59,9 @@ def createRegion(element, etree, view):
 	tag = element.tag
 	closeTag = "</" + tag + ">"
 	openTag = "<" + tag 
-	print(beginLine)
-	print(openTag)
-	print(closeTag)
+	# print(beginLine)
+	# print(openTag)
+	# print(closeTag) -- Debugging print statements
 	startPos1 = view.text_point(beginLine-1, 0)
 	openTagRegion = view.find(openTag, startPos1, sublime.IGNORECASE)
 	startPos2 = openTagRegion.b

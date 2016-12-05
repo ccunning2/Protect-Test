@@ -1,26 +1,6 @@
 from . import globals
 from . import parse_utils
-
-class SeleniumTestData:
-	def __init__(self, test):
-		self.test = test
-		self.locator = ""
-		self.text = ""
-
-	def getTest(self):
-		return self.test
-
-	def getLocator(self):
-		return self.locator
-
-	def getText(self):
-		return self.text
-
-	def setLocator(self, locator):
-		self.locator = locator
-
-	def setText(self, text):
-		self.text = text
+from ..models import test
 
 def buildTestData(): #Retrieves all test data from testfile
 	rows = globals.TEST_SOUP.find_all('tr')
@@ -30,16 +10,22 @@ def buildTestData(): #Retrieves all test data from testfile
 	rows.pop(0)
 	for row in rows:
 		tempData = row.find_all('td')
-		testData = SeleniumTestData(tempData[0].text)
+		type = tempData[0].text
+		if type == "clickAndWait":
+			testData = test.clickAndWait()
+		else:
+			testData = test.SeleniumTestData()
 		testData.setLocator(tempData[1].text)
 		testData.setText(tempData[2].text)
 		testList.append(testData)
 	return testList
 
+#Initial test processing done when command is run
 def processTestsInitial(testList):
 	tree = parse_utils.getMasterTree()
 	for test in testList:
-		if test.test == "clickAndWait":
+		print(test)
+		if test.__class__.__name__ == "clickAndWait":
 			print('CLICK_N_WAIT')
 			try:
 				processForm(test.locator, tree)
@@ -50,6 +36,14 @@ def processTestsInitial(testList):
 			#Just add the region to the list of test selectors for now
 			globals.CRITICAL_SELECTORS.append(test.locator)
 
+#Done everytime the listener is triggered.
+def processTests(testList, tree):
+	for test in testList:
+		if test.test == "clickAndWait":
+			processForm(test.locator, tree)
+		else:
+			print("Test type not implemented.")
+			
 def processForm(XPathLocator, tree):
 	requiredList = None
 	button = tree.xpath(XPathLocator)[0]

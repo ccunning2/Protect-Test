@@ -1,6 +1,6 @@
 import sublime, sublime_plugin
 from bs4 import BeautifulSoup
-from .lib import globals, test_utils, parse_utils, region_utils
+from .lib import globals, test_utils, parse_utils, region_utils, info_utilities
 
 import sys
 
@@ -40,10 +40,10 @@ class ProtectTestCommand(sublime_plugin.TextCommand):
 
 		#Finally, if there is a test file, parse it and build the test data		
 		if globals.TEST_SOUP: 
-			testList = test_utils.buildTestData()
-			print(testList)
-			test_utils.processTestsInitial(testList)
-			print(globals.CRITICAL_SELECTORS)
+			globals.TEST_LIST = test_utils.buildTestData()
+			print(globals.TEST_LIST)
+			test_utils.processTestsInitial(globals.TEST_LIST)
+			print("CRITICAL SELECTORS: " + str(globals.CRITICAL_SELECTORS))
 			tree = parse_utils.getViewTree(self.view)
 			for element in globals.CRITICAL_SELECTORS:
 				region = region_utils.createRegion(element, tree, self.view)
@@ -55,17 +55,21 @@ class SplitAndOpenCommand(sublime_plugin.WindowCommand):#This just creates a spl
 		self.window.focus_group(1)
 		self.window.open_file(filePath)
 		
-# class IDSelectorListener(sublime_plugin.EventListener):
-# 	def on_selection_modified_async(self, view): #Triggered anytime the cursor moves or edit window is clicked
-# 		if globals.TEST_FILE and (globals.EDIT_FILE == str(view.file_name())):
-# 			if len(globals.NODE_REGIONS) > 0:
-# 				#print(globals.NODE_REGIONS)
-# 				printStatusOfEverything(view)
-# 				caret_position = view.sel()[0]
-# 				if caretBreachedCriticalRegion(caret_position, view) == True:
-# 					print("Trigger Event!!")
-# 			else:
-# 				pass
+class IDSelectorListener(sublime_plugin.EventListener):
+	def on_selection_modified_async(self, view): #Triggered anytime the cursor moves or edit window is clicked
+		if globals.TEST_FILE and (globals.EDIT_FILE == str(view.file_name())):
+			#info_utilities.printStatusOfEverything(view)
+			tree = parse_utils.getViewTree(view)
+			test_utils.processTests(globals.TEST_LIST, tree)
+			
+			# if len(globals.NODE_REGIONS) > 0:
+			# 	#print(globals.NODE_REGIONS)
+				
+			# 	caret_position = view.sel()[0]
+			# 	if caretBreachedCriticalRegion(caret_position, view) == True:
+			# 		print("Trigger Event!!")
+			# else:
+			# 	pass
 
 # 	def on_modified_async(self,view):#Each time the buffer changes due to added character
 # 		if globals.TEST_FILE and (globals.EDIT_FILE == str(view.file_name())) and globals.LISTEN:
