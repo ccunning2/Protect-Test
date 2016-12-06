@@ -1,6 +1,7 @@
 from . import globals
 from . import parse_utils
 from ..models import test
+import sublime, sublime_plugin
 
 def buildTestData(): #Retrieves all test data from testfile
 	rows = globals.TEST_SOUP.find_all('tr')
@@ -12,11 +13,13 @@ def buildTestData(): #Retrieves all test data from testfile
 		tempData = row.find_all('td')
 		type = tempData[0].text
 		if type == "clickAndWait":
-			testData = test.clickAndWait()
+			testData = test.clickAndWait(tempData[1].text, tempData[2].text)
+		elif type == "assertElementPresent":
+			testData = test.assertElementPresent(tempData[1].text, tempData[2].text)
+		elif type == "select":
+			testData = test.select(tempData[1].text, tempData[2].text)
 		else:
-			testData = test.SeleniumTestData()
-		testData.setLocator(tempData[1].text)
-		testData.setText(tempData[2].text)
+			testData = test.SeleniumTest(tempData[1].text, tempData[2].text)
 		testList.append(testData)
 	return testList
 
@@ -26,21 +29,31 @@ def processTestsInitial(testList):
 	for test in testList:
 		print(test)
 		if test.__class__.__name__ == "clickAndWait":
-			print('CLICK_N_WAIT')
 			try:
 				processForm(test.locator, tree)
 			except IndexError:
 				print("Invalid Syntax, skipping for now")
-				return
+		elif test.__class__.__name__ == "assertElementPresent":
+			parse_utils.getElement(test.locator, tree)
+		elif test.__class__.__name__ == "select":
+			parse_utils.findOption(test, tree)
 		else:
-			#Just add the region to the list of test selectors for now
+			#Just add the selector to the list of test selectors for now
 			globals.CRITICAL_SELECTORS.append(test.locator)
 
 #Done everytime the listener is triggered.
 def processTests(testList, tree):
 	for test in testList:
-		if test.test == "clickAndWait":
+		if test.__class__.__name__ == "clickAndWait":
 			processForm(test.locator, tree)
+		elif test.__class__.__name__ == "assertElementPresent":
+			element = parse_utils.getElement(test.locator, tree)
+			if not element:
+				sublime.message_dialog("You've just made an edit that will cause your test to fail."
+				"The parser cannot find " + test.locator + ","
+				" but you may have removed another element to cause this.")
+		elif test.__class__.__name__ == "select":
+			parse_utils.findOption(test, tree)
 		else:
 			print("Test type not implemented.")
 			

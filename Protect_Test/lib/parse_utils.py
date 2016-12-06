@@ -2,7 +2,7 @@ from lxml import etree as ET
 from lxml.html import document_fromstring
 from lxml.html import parse as HTMLParse
 from . import globals
-import sublime
+import sublime, sublime_plugin
 
 def getTree(view): #Returns parse tree via lxmlimport(For use with XPath tasks)
 	return ET.fromstring(view.substr(sublime.Region(0, view.size())))
@@ -27,3 +27,14 @@ def compareForms(list1):
 			print("ALERT-- New Required Field")
 			sublime.message_dialog("You just added a required field that will break your test unless you modify it.")
 			globals.ELEMENTS_WARNED.append(selector)
+
+def getElement(XPath, tree):
+	return tree.xpath(XPath)
+
+def findOption(test, tree):
+	select = getElement(test.locator, tree)[0]
+	it = select.iterdescendants()
+	for element in it:
+		if element.text == test.label:
+			return
+	sublime.message_dialog("You just removed an option that will break your test!")

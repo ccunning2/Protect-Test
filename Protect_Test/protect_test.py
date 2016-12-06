@@ -46,6 +46,7 @@ class ProtectTestCommand(sublime_plugin.TextCommand):
 			print("CRITICAL SELECTORS: " + str(globals.CRITICAL_SELECTORS))
 			tree = parse_utils.getViewTree(self.view)
 			for element in globals.CRITICAL_SELECTORS:
+				print(element)
 				region = region_utils.createRegion(element, tree, self.view)
 				print(region)
 
