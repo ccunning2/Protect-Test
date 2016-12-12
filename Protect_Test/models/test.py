@@ -2,7 +2,9 @@ class SeleniumTest:
 	def __init__(self, locator, text):
 		self.locator = locator
 		self.text = text
-
+		self.warn = True
+		self.broken = False
+		
 	def getLocator(self):
 		return self.locator
 
@@ -27,5 +29,10 @@ class select(SeleniumTest):
 	def __init__(self, locator, text):
 		super().__init__(locator, text)
 		self.label = self.text.replace("label=", "")
+
+class generalAssert(SeleniumTest):
+	def __init__(self, locator, text):
+		super().__init__(locator, text)	
+
 		
 		

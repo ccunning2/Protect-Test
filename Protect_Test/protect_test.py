@@ -42,13 +42,11 @@ class ProtectTestCommand(sublime_plugin.TextCommand):
 		if globals.TEST_SOUP: 
 			globals.TEST_LIST = test_utils.buildTestData()
 			print(globals.TEST_LIST)
-			test_utils.processTestsInitial(globals.TEST_LIST)
-			print("CRITICAL SELECTORS: " + str(globals.CRITICAL_SELECTORS))
-			tree = parse_utils.getViewTree(self.view)
-			for element in globals.CRITICAL_SELECTORS:
-				print(element)
-				region = region_utils.createRegion(element, tree, self.view)
-				print(region)
+			test_utils.processTestsInitial(globals.TEST_LIST, self.view)
+			for region in globals.REGION_LIST:
+				print(region.text)
+				print(region.test)
+			
 
 class SplitAndOpenCommand(sublime_plugin.WindowCommand):#This just creates a split-pane view with test/under_test
 	def run(self, filePath):
@@ -56,31 +54,17 @@ class SplitAndOpenCommand(sublime_plugin.WindowCommand):#This just creates a spl
 		self.window.focus_group(1)
 		self.window.open_file(filePath)
 		
-class IDSelectorListener(sublime_plugin.EventListener):
+class EditListener(sublime_plugin.EventListener):
 	def on_selection_modified_async(self, view): #Triggered anytime the cursor moves or edit window is clicked
 		if globals.TEST_FILE and (globals.EDIT_FILE == str(view.file_name())):
 			#info_utilities.printStatusOfEverything(view)
 			tree = parse_utils.getViewTree(view)
 			test_utils.processTests(globals.TEST_LIST, tree)
 			
-			# if len(globals.NODE_REGIONS) > 0:
-			# 	#print(globals.NODE_REGIONS)
-				
-			# 	caret_position = view.sel()[0]
-			# 	if caretBreachedCriticalRegion(caret_position, view) == True:
-			# 		print("Trigger Event!!")
-			# else:
-			# 	pass
+	def on_modified_async(self,view):#Each time the buffer changes due to added character
+		region_utils.updateRegions(view)
 
-# 	def on_modified_async(self,view):#Each time the buffer changes due to added character
-# 		if globals.TEST_FILE and (globals.EDIT_FILE == str(view.file_name())) and globals.LISTEN:
-# 			globals.NODE_REGIONS = []
-# 			print("**Resetting Node Regions**\n")
-# 			getNodeRegions(view)
-# 		else:
-# 			pass
-
-# class HoverListener(sublime_plugin.ViewEventListener):
-# 	def on_hover(self,point, hover_zone):
-# 		if hover_zone == sublime.HOVER_TEXT:
-#			pointInCriticalRegion(point, self.view)
+class HoverListener(sublime_plugin.ViewEventListener):
+	def on_hover(self,point, hover_zone):
+		if hover_zone == sublime.HOVER_TEXT:
+			region_utils.pointInCriticalRegion(point, self.view)

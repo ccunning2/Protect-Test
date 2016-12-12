@@ -1,12 +1,12 @@
 #Module for global variables
-ID_REGIONS = []
-NODE_REGIONS = []
+REGION_LIST = []
 TEST_FILE = None
 TEST_SOUP = None
 EDIT_FILE = None
 LISTEN = True
-CRITICAL_SELECTORS = []
+#CRITICAL_SELECTORS = []
+ELEMENTS_WARNED = []
+ASSERT_TESTS = ["assertText", "verifyText"]
 
 ORIGINAL_FORM = None
-ELEMENTS_WARNED = []
 TEST_LIST = []

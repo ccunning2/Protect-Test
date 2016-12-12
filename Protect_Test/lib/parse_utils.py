@@ -21,7 +21,7 @@ def buildFormList(element): #Takes a form element, builds list of xpath locators
 		requiredList.append(tree.getpath(el))
 	return requiredList
 
-def compareForms(list1):
+def compareForms(list1): #TODO Fix this
 	for selector in list1:
 		if selector not in globals.ORIGINAL_FORM and selector not in globals.ELEMENTS_WARNED:
 			print("ALERT-- New Required Field")
@@ -36,5 +36,7 @@ def findOption(test, tree):
 	it = select.iterdescendants()
 	for element in it:
 		if element.text == test.label:
-			return
+			return select  #Returning the element here for use with the regions
 	sublime.message_dialog("You just removed an option that will break your test!")
+	test.warn = False
+	return select
