@@ -9,13 +9,6 @@ class ProtectTestCommand(sublime_plugin.TextCommand):
 
 		#Try to open file under test
 		globals.EDIT_FILE = str(self.view.file_name())
-		# try:
-		# 	htmlSoup = BeautifulSoup(open(globals.EDIT_FILE), "lxml") #Open the html file
-		# except:
-		# 	print("There was an error opening the test file")
-		# 	e = sys.exc_info()[0]
-		# 	print(e)
-		# 	return
 
 		#Look for a meta tag identifying a test file
 		try:

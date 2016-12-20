@@ -18,7 +18,7 @@ def pointInCriticalRegion(point, view):
 def getTestHtml(crit_region):
 	test = crit_region.test
 	modified = str(crit_region.modified)
-	html = "<html><body><h3>Test Info:</h3><ul><li>Test Type: " + test.__class__.__name__ + "</li><li>Test Locator: " + test.locator + "</li><li> Test Broken: " + str(test.broken) + "</li></ul></body></html>"
+	html = "<html><body><h3>Test Info:</h3><ul><li>Test Type: " + test.__class__.__name__ + "</li><li>Test Locator: " + test.locator + "</li><li>Test File: " + test.file + "</li><li>Line Number: " + str(test.line) + "</li><li>Test Broken: " + str(test.broken) + "</li></ul></body></html>"
 	return html
 
 # def getRegionByLines(line1, line2, view): #Returns the region starting at the beginning of line1 and the end of line 2 
