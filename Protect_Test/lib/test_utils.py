@@ -4,25 +4,29 @@ from ..models import test
 import sublime, sublime_plugin
 
 def buildTestData(): #Retrieves all test data from testfile
-	rows = globals.TEST_SOUP.find_all('tr')
+	print('In build test data\n')
 	testList = []
-	#Get rid of first two rows
-	rows.pop(0)
-	rows.pop(0)
-	for row in rows:
-		tempData = row.find_all('td')
-		type = tempData[0].text
-		if type == "clickAndWait":
-			testData = test.clickAndWait(tempData[1].text, tempData[2].text)
-		elif type == "assertElementPresent":
-			testData = test.assertElementPresent(tempData[1].text, tempData[2].text)
-		elif type == "select":
-			testData = test.select(tempData[1].text, tempData[2].text)
-		elif type in globals.ASSERT_TESTS:
-			testData = test.generalAssert(tempData[1].text, tempData[2].text)
-		else:
-			testData = test.SeleniumTest(tempData[1].text, tempData[2].text)
-		testList.append(testData)
+	for file in globals.TEST_FILES:
+		print(file)
+		tree = parse_utils.HTMLParse(file)
+		rows = tree.findall('//tr')
+		#Get rid of first two rows
+		rows.pop(0)
+		rows.pop(0)
+		for row in rows:
+			tempData = row.getchildren()
+			type = tempData[0].text
+			if type == "clickAndWait":
+				testData = test.clickAndWait(file, tempData[0].sourceline, tempData[1].text, tempData[2].text)
+			elif type == "assertElementPresent":
+				testData = test.assertElementPresent(file, tempData[0].sourceline, tempData[1].text, tempData[2].text)
+			elif type == "select":
+				testData = test.select(file, tempData[0].sourceline, tempData[1].text, tempData[2].text)
+			elif type in globals.ASSERT_TESTS:
+				testData = test.generalAssert(file, tempData[0].sourceline, tempData[1].text, tempData[2].text)
+			else:
+				testData = test.SeleniumTest(file, tempData[0].sourceline, tempData[1].text, tempData[2].text)
+			testList.append(testData)
 	return testList
 
 #Initial test processing done when command is run
@@ -47,11 +51,11 @@ def processTestsInitial(testList, view):
 			globals.REGION_LIST.append(region)
 
 #Done everytime the listener is triggered.
-def processTests(testList, tree):
+def processTests(testList, tree, view):
 	for test in testList:
 		if test.warn:
 			if test.__class__.__name__ == "clickAndWait":
-				processForm(test.locator, tree)
+				processForm(test.locator, tree, test, view)
 			elif test.__class__.__name__ == "assertElementPresent":
 				element = parse_utils.getElement(test.locator, tree)
 				if not element:
