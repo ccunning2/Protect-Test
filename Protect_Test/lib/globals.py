@@ -7,6 +7,6 @@ LISTEN = False
 #CRITICAL_SELECTORS = []
 ELEMENTS_WARNED = []
 ASSERT_TESTS = ["assertText", "verifyText"]
-
+IGNORE_TESTS = ["open", "pause"]
 ORIGINAL_FORM = None
 TEST_LIST = []

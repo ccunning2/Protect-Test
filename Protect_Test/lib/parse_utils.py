@@ -3,6 +3,7 @@ from lxml.html import document_fromstring
 from lxml.html import parse as HTMLParse
 from . import globals
 import sublime, sublime_plugin
+import re
 
 def getTree(view): #Returns parse tree via lxmlimport(For use with XPath tasks)
 	return ET.fromstring(view.substr(sublime.Region(0, view.size())))
@@ -43,6 +44,46 @@ def compareForms(list1):
 def getElement(XPath, tree):
 	return tree.xpath(XPath)
 
+def getElementCss(tag, key, value, tree):
+	it = tree.iter()
+	for element in it:
+		if element.tag == tag and element.attrib[key] == value:
+			return element
+	return None
+
+def getNonXPathElement(locator, tree):
+	print('Getting non-XPath Element\n')
+	#Split locator
+	splitLoc = locator.split('=', 1)
+	type = splitLoc[0]
+	if type == 'name':
+		return getName(splitLoc[1], tree)
+	elif type == 'link':
+		return getLink(splitLoc[1], tree)
+	elif type == 'css':
+		#Need to do some string manipulation
+		targets = splitLoc[1].split('[')
+		tag = targets[0]
+		attrib = targets[1].strip(']').split('=')
+		key = attrib[0]
+		value = attrib[1].strip('"')
+		return getElementCss(tag, key, value, tree)
+	return None
+
+def getLink(name, tree): #Returns the first link element with 'name' from tree
+	iterator = tree.iter()
+	for element in iterator:
+		if element.tag == 'a' and element.text == name:
+			return element
+	return None
+
+def getName(name, tree): #Returns the first element with the 'name' attribute provided
+	iterator = tree.iter()
+	for element in iterator:
+		if element.get('name') == name:
+			return element
+	return None
+
 def findOption(test, tree):
 	select = getElement(test.locator, tree)[0]
 	it = select.iterdescendants()
@@ -52,3 +93,21 @@ def findOption(test, tree):
 	sublime.message_dialog("You just removed an option that will break your test!")
 	test.warn = False
 	return select
+
+def verifyLocator(locator, tree): #Checks to see if element pointed to by locator is present
+	#Is locator Xpath?
+	if isXpath(locator):
+		if getElement(locator, tree):
+			return True
+		return False
+	else:
+		if getNonXPathElement(locator, tree) is not None:
+			return True
+		return False
+
+def isXpath(locator):
+	xPathPattern = '^//(\S+/?)*$'
+	if re.match(xPathPattern, locator):
+		return True
+	else:
+		return False

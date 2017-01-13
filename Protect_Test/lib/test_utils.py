@@ -18,12 +18,16 @@ def buildTestData(): #Retrieves all test data from testfile
 			type = tempData[0].text
 			if type == "clickAndWait":
 				testData = test.clickAndWait(file, tempData[0].sourceline, tempData[1].text, tempData[2].text)
+			elif type == "click":
+				testData = test.click(file, tempData[0].sourceline, tempData[1].text, tempData[2].text)
 			elif type == "assertElementPresent":
 				testData = test.assertElementPresent(file, tempData[0].sourceline, tempData[1].text, tempData[2].text)
 			elif type == "select":
 				testData = test.select(file, tempData[0].sourceline, tempData[1].text, tempData[2].text)
 			elif type in globals.ASSERT_TESTS:
 				testData = test.generalAssert(file, tempData[0].sourceline, tempData[1].text, tempData[2].text)
+			elif type in globals.IGNORE_TESTS:
+				continue
 			else:
 				testData = test.SeleniumTest(file, tempData[0].sourceline, tempData[1].text, tempData[2].text)
 			testList.append(testData)
@@ -34,6 +38,8 @@ def processTestsInitial(testList, view):
 	tree = parse_utils.getMasterTree()
 	for test in testList:
 		print(test)
+		if not parse_utils.verifyLocator(test.locator, tree):
+			sublime.message_dialog("Cannot locate element at " + test.locator)
 		if test.__class__.__name__ == "clickAndWait": #TODO Add region for this
 			try:
 				processForm(test.locator, tree, test, view)
@@ -45,7 +51,10 @@ def processTestsInitial(testList, view):
 			region = region_utils.CriticalRegion(region, test, view)
 			globals.REGION_LIST.append(region)
 		else:
-			element = parse_utils.getElement(test.locator, tree)[0]
+			if parse_utils.isXpath(test.locator):
+				element = parse_utils.getElement(test.locator, tree)[0]
+			else:
+				element = parse_utils.getNonXPathElement(test.locator, tree)
 			region = region_utils.createRegion(element, tree, view)
 			region = region_utils.CriticalRegion(region, test, view)
 			globals.REGION_LIST.append(region)
@@ -77,9 +86,13 @@ def processTests(testList, tree, view):
 			else:
 				print("Test type not implemented.")
 			
-def processForm(XPathLocator, tree, test, view):
+def processForm(locator, tree, test, view):
 	requiredList = None
-	button = tree.xpath(XPathLocator)[0]
+	print(locator)
+	if parse_utils.isXpath(locator):
+		button = tree.xpath(locator)[0]
+	else:
+		button = parse_utils.getNonXPathElement(locator, tree)
 	it = button.iterancestors()
 	for element in it:
 		if element.tag == "form":

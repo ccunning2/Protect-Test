@@ -36,5 +36,9 @@ class generalAssert(SeleniumTest):
 	def __init__(self, file, line, locator, text):
 		super().__init__(file, line, locator, text)	
 
+class click(SeleniumTest):
+	def __init__(self, file, line, locator, text):
+		super().__init__(file, line, locator, text)	
+
 		
 		
