@@ -1,8 +1,22 @@
 import sublime, sublime_plugin
 from bs4 import BeautifulSoup
 from .lib import globals, test_utils, parse_utils, region_utils, info_utilities
+from .models.protected_test import ProtectedTest
 
 import sys
+
+def plugin_loaded():
+	for protected_test in sublime.load_settings('protect_test.sublime-settings').get('protected_tests'):
+		if not test_utils.filePresent(protected_test):
+			sublime.error_message("PROTECT TEST: " + protected_test + " cannot be found!")
+			continue
+		test = ProtectedTest(protected_test)
+		globals.PROTECTED_TESTS.append(test)
+	print(globals.PROTECTED_TESTS)
+	if globals.PROTECTED_TESTS:
+		test_utils.buildTestData()
+	info_utilities.printProtectedTestInfo()
+	#print(individualTests)
 
 class ProtectTestCommand(sublime_plugin.TextCommand): 
 	def run(self, edit):

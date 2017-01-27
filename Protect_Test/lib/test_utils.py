@@ -1,37 +1,56 @@
 from . import globals
-from . import parse_utils, region_utils
-from ..models import test
-import sublime, sublime_plugin
+from . import parse_utils, region_utils, info_utilities
+from ..models import test, file_under_test
+import sublime, sublime_plugin, os.path
+import re
 
 def buildTestData(): #Retrieves all test data from testfile
 	print('In build test data\n')
 	testList = []
-	for file in globals.TEST_FILES:
-		print(file)
-		tree = parse_utils.HTMLParse(file)
-		rows = tree.findall('//tr')
-		#Get rid of first two rows
+	for protected_test in globals.PROTECTED_TESTS:
+		print(protected_test.path)
+		testTree = parse_utils.HTMLParse(protected_test.path)
+		rows = testTree.findall('//tr')
+		#Get rid of first row
 		rows.pop(0)
-		rows.pop(0)
+		testedFile = None
 		for row in rows:
 			tempData = row.getchildren()
 			type = tempData[0].text
-			if type == "clickAndWait":
-				testData = test.clickAndWait(file, tempData[0].sourceline, tempData[1].text, tempData[2].text)
+			if type == "open":
+				target = parse_utils.processTarget(tempData[1].text)
+				if not filePresent(target):
+					sublime.message_dialog("The target of test " + protected_test.path + ", " + target + ", cannot be found!")
+					continue
+				testedFile = protected_test.getFileUnderTest(target)
+			elif type == "clickAndWait":
+				testData = test.clickAndWait(testedFile, tempData[0].sourceline, tempData[1].text, tempData[2].text)
+				testedFile.tests.append(testData)
+				#Resolve target file of clickAndWait, if applicable
+				testedFileTree = parse_utils.HTMLParse(testedFile.path)
+				target = parse_utils.getClickWaitTarget(testData.locator, testedFileTree)
+				print("ClickWait target is " + target)
+				if testedFile.path != target:
+					testedFile = protected_test.getFileUnderTest(target)
 			elif type == "click":
-				testData = test.click(file, tempData[0].sourceline, tempData[1].text, tempData[2].text)
+				testData = test.click(testedFile, tempData[0].sourceline, tempData[1].text, tempData[2].text)
+				testedFile.tests.append(testData)
 			elif type == "assertElementPresent":
-				testData = test.assertElementPresent(file, tempData[0].sourceline, tempData[1].text, tempData[2].text)
+				testData = test.assertElementPresent(testedFile, tempData[0].sourceline, tempData[1].text, tempData[2].text)
+				testedFile.tests.append(testData)
 			elif type == "select":
-				testData = test.select(file, tempData[0].sourceline, tempData[1].text, tempData[2].text)
+				testData = test.select(testedFile, tempData[0].sourceline, tempData[1].text, tempData[2].text)
+				testedFile.tests.append(testData)
 			elif type in globals.ASSERT_TESTS:
-				testData = test.generalAssert(file, tempData[0].sourceline, tempData[1].text, tempData[2].text)
+				testData = test.generalAssert(testedFile, tempData[0].sourceline, tempData[1].text, tempData[2].text)
+				testedFile.tests.append(testData)
 			elif type in globals.IGNORE_TESTS:
 				continue
 			else:
-				testData = test.SeleniumTest(file, tempData[0].sourceline, tempData[1].text, tempData[2].text)
-			testList.append(testData)
-	return testList
+				testData = test.SeleniumTest(testedFile, tempData[0].sourceline, tempData[1].text, tempData[2].text)
+				testedFile.tests.append(testData)
+			#testList.append(testData)
+	
 
 #Initial test processing done when command is run
 def processTestsInitial(testList, view):
@@ -114,6 +133,10 @@ def processForm(locator, tree, test, view):
 		print("globals.ORIGINAL_FORM is: " + str(globals.ORIGINAL_FORM))
 	else:
 		print("No globals.ORIGINAL_FORM")
+
+def filePresent(path):
+	return os.path.isfile(path)
+
 
 # def idSelectors(): #Retrieves all 'id' selectors from testfile. globals.TEST_SOUP is a BeautifulSoup object
 # 	testTableData = globals.TEST_SOUP.find_all('td')

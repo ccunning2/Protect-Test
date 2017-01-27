@@ -6,7 +6,8 @@ class SeleniumTest:
 		self.text = text
 		self.warn = True
 		self.broken = False
-		
+	
+	#Can remove below methods as class attributes in python are public	
 	def getLocator(self):
 		return self.locator
 

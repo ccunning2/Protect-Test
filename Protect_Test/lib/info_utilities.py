@@ -10,3 +10,17 @@ def printStatusOfEverything(view):
 	print("Listen is: " + str(globals.LISTEN) + "\n")
 	print("Cursor is at: " + str(view.sel()[0].a) + "\n")
 	#printRegionInfo()
+
+def printProtectedTestInfo():
+	for protectedTest in globals.PROTECTED_TESTS:
+		print("Protected Test Info")
+		print("-----------------------")
+		print("Protected Test: " + protectedTest.path)
+		print("Files")
+		print("-----")
+		for file in protectedTest.filesUnderTest:
+			print("File: " + file.path)
+			print("\tTests associated with file: ")
+			for test in file.tests:
+				print(test.locator)
+				print(test.text)

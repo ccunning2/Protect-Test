@@ -52,7 +52,7 @@ def getElementCss(tag, key, value, tree):
 	return None
 
 def getNonXPathElement(locator, tree):
-	print('Getting non-XPath Element\n')
+	print('Getting non-XPath Element\n Locator: ' + locator)
 	#Split locator
 	splitLoc = locator.split('=', 1)
 	type = splitLoc[0]
@@ -105,9 +105,31 @@ def verifyLocator(locator, tree): #Checks to see if element pointed to by locato
 			return True
 		return False
 
+def getClickWaitTarget(locator, tree):
+	if isXpath(locator):
+		element = getElement(locator, tree)
+	else:
+		element = getNonXPathElement(locator, tree)
+
+	if element is not None:
+		if element.tag == 'a' and element.get('href') is not None:
+			return processTarget(element.get('href'))
+		elif element.getparent().tag == 'a' and element.getparent().get('href') is not None:
+			return processTarget(element.getparent().get('href'))
+		elif element.tag == 'input' and element.getparent().get('action') is not None:
+			return processTarget(element.getparent().get('action'))
+		else:
+			print("Could not locate element")
+
+	else:
+		print("Element not located")	
+
 def isXpath(locator):
 	xPathPattern = '^//(\S+/?)*$'
 	if re.match(xPathPattern, locator):
 		return True
 	else:
 		return False
+
+def processTarget(url):
+	return url.replace("file://", "", 1)
