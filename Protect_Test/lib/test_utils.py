@@ -53,30 +53,30 @@ def buildTestData(): #Retrieves all test data from testfile
 	
 
 #Initial test processing done when command is run
-def processTestsInitial(testList, view):
-	tree = parse_utils.getMasterTree()
-	for test in testList:
+def processTestsInitial(file):
+	tree = parse_utils.getMasterTree(file.path)
+	for test in file.tests:
 		print(test)
 		if not parse_utils.verifyLocator(test.locator, tree):
 			sublime.message_dialog("Cannot locate element at " + test.locator)
 		if test.__class__.__name__ == "clickAndWait": #TODO Add region for this
 			try:
-				processForm(test.locator, tree, test, view)
+				processForm(test.locator, tree, test, file)
 			except IndexError:
 				print("Invalid Syntax, skipping for now")
 		elif test.__class__.__name__ == "select":
 			element = parse_utils.findOption(test, tree)
-			region = region_utils.createRegion(element, tree, view)
-			region = region_utils.CriticalRegion(region, test, view)
-			globals.REGION_LIST.append(region)
+			# region = region_utils.createRegion(element, tree, view)
+			# region = region_utils.CriticalRegion(region, test, view)
+			# globals.REGION_LIST.append(region)
 		else:
 			if parse_utils.isXpath(test.locator):
 				element = parse_utils.getElement(test.locator, tree)[0]
 			else:
 				element = parse_utils.getNonXPathElement(test.locator, tree)
-			region = region_utils.createRegion(element, tree, view)
-			region = region_utils.CriticalRegion(region, test, view)
-			globals.REGION_LIST.append(region)
+			# region = region_utils.createRegion(element, tree, view)
+			# region = region_utils.CriticalRegion(region, test, view)
+			# globals.REGION_LIST.append(region)
 
 #Done everytime the listener is triggered.
 def processTests(testList, tree, view):
@@ -105,7 +105,7 @@ def processTests(testList, tree, view):
 			else:
 				print("Test type not implemented.")
 			
-def processForm(locator, tree, test, view):
+def processForm(locator, tree, test, file):
 	requiredList = None
 	print(locator)
 	if parse_utils.isXpath(locator):
@@ -115,24 +115,24 @@ def processForm(locator, tree, test, view):
 	it = button.iterancestors()
 	for element in it:
 		if element.tag == "form":
-			if globals.ORIGINAL_FORM is None:
-				globals.ORIGINAL_FORM = parse_utils.buildFormList(element)
-				region = region_utils.createRegion(element, tree, view)
-				globals.REGION_LIST.append(region_utils.CriticalRegion(region, test, view))
+			if file.ORIGINAL_FORM is None:
+				file.ORIGINAL_FORM = parse_utils.buildFormList(element)
+				# region = region_utils.createRegion(element, tree, view)
+				# globals.REGION_LIST.append(region_utils.CriticalRegion(region, test, view))
 			else:
 				requiredList = parse_utils.buildFormList(element)
 			break
-	if globals.ORIGINAL_FORM is None and requiredList is None:
+	if file.ORIGINAL_FORM is None and requiredList is None:
 		print('Input has no form parent!!')
 	if requiredList is not None:
 		print("requiredList is: " + str(requiredList))
 		parse_utils.compareForms(requiredList) 
 	else:
 		print("No requiredList")
-	if globals.ORIGINAL_FORM is not None:
-		print("globals.ORIGINAL_FORM is: " + str(globals.ORIGINAL_FORM))
+	if file.ORIGINAL_FORM is not None:
+		print("file.ORIGINAL_FORM is: " + str(file.ORIGINAL_FORM))
 	else:
-		print("No globals.ORIGINAL_FORM")
+		print("No file.ORIGINAL_FORM")
 
 def filePresent(path):
 	return os.path.isfile(path)

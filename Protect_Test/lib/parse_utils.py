@@ -11,8 +11,9 @@ def getTree(view): #Returns parse tree via lxmlimport(For use with XPath tasks)
 def getViewTree(view): #Same as getTree?
 	return document_fromstring(view.substr(sublime.Region(0, view.size())))
 
-def getMasterTree(): #Gets lxml etree from the file
-	return HTMLParse(open(globals.EDIT_FILE))
+def getMasterTree(path): #Gets lxml etree from the file
+	print(path)
+	return HTMLParse(path)
 
 def getTestFiles():
 	list = []

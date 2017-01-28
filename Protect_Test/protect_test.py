@@ -16,6 +16,9 @@ def plugin_loaded():
 	if globals.PROTECTED_TESTS:
 		test_utils.buildTestData()
 	info_utilities.printProtectedTestInfo()
+	for protected_test in globals.PROTECTED_TESTS:
+		for file in protected_test.filesUnderTest:
+			test_utils.processTestsInitial(file)
 	#print(individualTests)
 
 class ProtectTestCommand(sublime_plugin.TextCommand): 
@@ -63,7 +66,16 @@ class EditListener(sublime_plugin.EventListener):
 		if globals.LISTEN and (globals.EDIT_FILE == str(view.file_name())):
 			region_utils.updateRegions(view)
 
-class HoverListener(sublime_plugin.ViewEventListener):
+class ViewListener(sublime_plugin.ViewEventListener):
 	def on_hover(self,point, hover_zone):
 		if globals.LISTEN and (globals.EDIT_FILE == str(self.view.file_name())) and hover_zone == sublime.HOVER_TEXT:
 			region_utils.pointInCriticalRegion(point, self.view)
+
+	def on_activated_async(self):
+		for protected_test in globals.PROTECTED_TESTS:
+			for file in protected_test.filesUnderTest:
+				if file.path == self.view.file_name():
+					print("This file is protected!")
+					globals.ACTIVE_FILE = file
+		if globals.ACTIVE_FILE is not None:
+			print(globals.ACTIVE_FILE.path)

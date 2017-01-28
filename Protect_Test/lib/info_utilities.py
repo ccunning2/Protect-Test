@@ -22,5 +22,6 @@ def printProtectedTestInfo():
 			print("File: " + file.path)
 			print("\tTests associated with file: ")
 			for test in file.tests:
+				print(test.__class__.__name__)
 				print(test.locator)
 				print(test.text)
