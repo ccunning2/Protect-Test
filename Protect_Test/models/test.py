@@ -23,6 +23,7 @@ class SeleniumTest:
 class clickAndWait(SeleniumTest):
 	def __init__(self, file, line, locator, text):
 		super().__init__(file, line, locator, text)
+		self.originalHREF = ""
 
 class assertElementPresent(SeleniumTest):
 	def __init__(self, file, line, locator, text):

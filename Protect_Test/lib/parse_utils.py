@@ -42,8 +42,13 @@ def compareForms(list1):
 			sublime.message_dialog("You just added a required field that will break your test unless you modify it.")
 			globals.ELEMENTS_WARNED.append(selector)
 
-def getElement(XPath, tree):
+def getXPathElement(XPath, tree):
 	return tree.xpath(XPath)
+
+def getElement(locator, tree):
+	if isXpath(locator):
+		return getXPathElement(locator, tree)
+	return getNonXPathElement(locator, tree)
 
 def getElementCss(tag, key, value, tree):
 	it = tree.iter()
@@ -97,33 +102,38 @@ def findOption(test, tree):
 
 def verifyLocator(locator, tree): #Checks to see if element pointed to by locator is present
 	#Is locator Xpath?
+	print("In verify locator...")
 	if isXpath(locator):
-		if getElement(locator, tree):
+		if getXPathElement(locator, tree):
 			return True
 		return False
 	else:
 		if getNonXPathElement(locator, tree) is not None:
+			print("Element located!")
 			return True
 		return False
 
-def getClickWaitTarget(locator, tree):
-	if isXpath(locator):
-		element = getElement(locator, tree)
+def getClickWaitTarget(test, tree):
+	if isXpath(test.locator):
+		element = getElement(test.locator, tree)
 	else:
-		element = getNonXPathElement(locator, tree)
+		element = getNonXPathElement(test.locator, tree)
 
 	if element is not None:
 		if element.tag == 'a' and element.get('href') is not None:
+			test.originalHREF = processTarget(element.get('href'))
 			return processTarget(element.get('href'))
 		elif element.getparent().tag == 'a' and element.getparent().get('href') is not None:
+			test.originalHREF = processTarget(element.getparent().get('href'))
 			return processTarget(element.getparent().get('href'))
 		elif element.tag == 'input' and element.getparent().get('action') is not None:
+			#Do we need to store the orignal action?
 			return processTarget(element.getparent().get('action'))
 		else:
 			print("Could not locate element")
 
 	else:
-		print("Element not located")	
+		print("Element not located")
 
 def isXpath(locator):
 	xPathPattern = '^//(\S+/?)*$'

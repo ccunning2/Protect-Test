@@ -23,12 +23,15 @@ def buildTestData(): #Retrieves all test data from testfile
 					sublime.message_dialog("The target of test " + protected_test.path + ", " + target + ", cannot be found!")
 					continue
 				testedFile = protected_test.getFileUnderTest(target)
-			elif type == "clickAndWait":
+			elif type == "clickAndWait": #Need to resolve target of clickAndWait to get next "FileUnderTest"
 				testData = test.clickAndWait(testedFile, tempData[0].sourceline, tempData[1].text, tempData[2].text)
 				testedFile.tests.append(testData)
 				#Resolve target file of clickAndWait, if applicable
 				testedFileTree = parse_utils.HTMLParse(testedFile.path)
-				target = parse_utils.getClickWaitTarget(testData.locator, testedFileTree)
+				target = parse_utils.getClickWaitTarget(testData, testedFileTree)
+				if target is None:
+					sublime.error_message("ERROR IN PROTECTED TEST: " + protected_test.path + "\nThere was an error determining target " + testData.locator + " in file " + testedFile.path)
+					continue
 				print("ClickWait target is " + target)
 				if testedFile.path != target:
 					testedFile = protected_test.getFileUnderTest(target)
@@ -52,56 +55,63 @@ def buildTestData(): #Retrieves all test data from testfile
 			#testList.append(testData)
 	
 
-#Initial test processing done when command is run
-def processTestsInitial(file):
-	tree = parse_utils.getMasterTree(file.path)
-	for test in file.tests:
-		print(test)
-		if not parse_utils.verifyLocator(test.locator, tree):
-			sublime.message_dialog("Cannot locate element at " + test.locator)
-		if test.__class__.__name__ == "clickAndWait": #TODO Add region for this
-			try:
-				processForm(test.locator, tree, test, file)
-			except IndexError:
-				print("Invalid Syntax, skipping for now")
-		elif test.__class__.__name__ == "select":
-			element = parse_utils.findOption(test, tree)
-			# region = region_utils.createRegion(element, tree, view)
-			# region = region_utils.CriticalRegion(region, test, view)
-			# globals.REGION_LIST.append(region)
-		else:
-			if parse_utils.isXpath(test.locator):
-				element = parse_utils.getElement(test.locator, tree)[0]
-			else:
-				element = parse_utils.getNonXPathElement(test.locator, tree)
-			# region = region_utils.createRegion(element, tree, view)
-			# region = region_utils.CriticalRegion(region, test, view)
-			# globals.REGION_LIST.append(region)
+#Initial test processing done when plugin is loaded
+def verifyTestsInitial():
+	for protected_test in globals.PROTECTED_TESTS:
+		for file in protected_test.filesUnderTest:
+			tree = parse_utils.getMasterTree(file.path)
+			for test in file.tests:
+				print(test)
+				if not parse_utils.verifyLocator(test.locator, tree):
+					sublime.message_dialog("Cannot locate element at " + test.locator)
+				if test.__class__.__name__ == "clickAndWait": #TODO Add region for this
+					try:
+						processForm(test.locator, tree, test, file)
+					except IndexError:
+						print("Invalid Syntax, skipping for now")
+				elif test.__class__.__name__ == "select":
+					element = parse_utils.findOption(test, tree)
+					# region = region_utils.createRegion(element, tree, view)
+					# region = region_utils.CriticalRegion(region, test, view)
+					# globals.REGION_LIST.append(region)
+				else:
+					if parse_utils.isXpath(test.locator):
+						element = parse_utils.getElement(test.locator, tree)[0]
+					else:
+						element = parse_utils.getNonXPathElement(test.locator, tree)
+					# region = region_utils.createRegion(element, tree, view)
+					# region = region_utils.CriticalRegion(region, test, view)
+					# globals.REGION_LIST.append(region)
 
 #Done everytime the listener is triggered.
-def processTests(testList, tree, view):
+def processTests(testList, tree, view, file):
 	for test in testList:
 		if test.warn:
 			if test.__class__.__name__ == "clickAndWait":
-				processForm(test.locator, tree, test, view)
-			elif test.__class__.__name__ == "assertElementPresent":
-				element = parse_utils.getElement(test.locator, tree)
-				if not element:
+				if not parse_utils.verifyLocator(test.locator, tree):
 					sublime.message_dialog("You've just made an edit that will cause your test to fail."
 					"The parser cannot find " + test.locator + ","
 					" but you may have removed another element to cause this.")
 					test.warn = False
 					test.broken = True
+				else:
+					processForm(test.locator, tree, test, file)
+				if test.originalHREF != "" and test.warn:
+					checkClickWaitTarget(test, tree)
+			elif test.__class__.__name__ == "assertElementPresent":
+				element = parse_utils.getElement(test.locator, tree)
+				if not element:
+					queryWarning(test)
 			elif test.__class__.__name__ == "select":
 				parse_utils.findOption(test, tree)
+				if not parse_utils.verifyLocator(test.locator, tree):
+					queryWarning(test)
 			elif test.__class__.__name__ == "generalAssert":
+				if not parse_utils.verifyLocator(test.locator, tree):
+					queryWarning(test)
 				element = parse_utils.getElement(test.locator, tree)[0]
 				if element.text.strip() != test.text.strip():
-					sublime.message_dialog("You just altered text used in an assertion that will break your test.")
-					print("Test text: " + test.text.strip())
-					print("Element text: " + element.text.strip())
-					test.warn = False
-					test.broken = True
+					queryWarning(test)
 			else:
 				print("Test type not implemented.")
 			
@@ -137,6 +147,33 @@ def processForm(locator, tree, test, file):
 def filePresent(path):
 	return os.path.isfile(path)
 
+def queryWarning(test):
+	answer = sublime.ok_cancel_dialog("The element pointed at " + test.locator + " has changed, potentially breaking your test. If you'd like to continue being warned about this test, hit cancel.", "Turn off warnings for this test.")
+	if answer:
+		test.warn = False
+
+def checkClickWaitTarget(test, tree):
+	if test.warn:	
+		if parse_utils.isXpath(test.locator):
+			element = parse_utils.getElement(test.locator, tree)
+		else:
+			element = parse_utils.getNonXPathElement(test.locator, tree)
+
+		if element is not None:
+			if element.tag == 'a' and element.get('href') is not None:
+				if test.originalHREF != parse_utils.processTarget(element.get('href')):
+					queryWarning(test)
+			elif element.getparent().tag == 'a' and element.getparent().get('href') is not None:
+				if test.originalHREF != parse_utils.processTarget(element.getparent().get('href')):
+					answer = sublime.ok_cancel_dialog("The element pointed at " + test.locator + " has changed, potentially breaking your test. If you'd like to continue being warned about this test, hit cancel.", "Turn off warnings for this test.")
+					queryWarning(test)
+			elif element.tag == 'input' and element.getparent().get('action') is not None:
+				#Deal with modified action attribute?
+				pass
+			else:
+				print("Could not locate element")
+		else:
+			print("Element not located")
 
 # def idSelectors(): #Retrieves all 'id' selectors from testfile. globals.TEST_SOUP is a BeautifulSoup object
 # 	testTableData = globals.TEST_SOUP.find_all('td')
