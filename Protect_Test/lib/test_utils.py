@@ -94,6 +94,9 @@ def processTests(testList, tree, view, file):
 					processForm(test.locator, tree, test, file)
 				if test.originalHREF != "" and test.warn:
 					checkClickWaitTarget(test, tree, view)
+			elif test.__class__.__name__ == "click":
+				if not parse_utils.verifyLocator(test.locator, tree):
+					queryWarning(test, view)
 			elif test.__class__.__name__ == "assertElementPresent":
 				element = parse_utils.getElement(test.locator, tree)
 				if not element:
