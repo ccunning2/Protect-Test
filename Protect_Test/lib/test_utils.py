@@ -38,6 +38,9 @@ def buildTestData(): #Retrieves all test data from testfile
 			elif type == "click":
 				testData = test.click(testedFile, tempData[0].sourceline, tempData[1].text, tempData[2].text)
 				testedFile.tests.append(testData)
+			elif type == "type":
+				testData = test.type(testedFile, tempData[0].sourceline, tempData[1].text, tempData[2].text)
+				testedFile.tests.append(testData)
 			elif type == "assertElementPresent":
 				testData = test.assertElementPresent(testedFile, tempData[0].sourceline, tempData[1].text, tempData[2].text)
 				testedFile.tests.append(testData)
@@ -74,6 +77,9 @@ def verifyTestsInitial():
 					# region = region_utils.createRegion(element, tree, view)
 					# region = region_utils.CriticalRegion(region, test, view)
 					# globals.REGION_LIST.append(region)
+				elif test.__class__.__name__ == "type":
+					if not parse_utils.verifyType(test, tree):
+						sublime.message_dialog("Test " + test.locator + " is broken from file " + file.path)
 				else:
 					if parse_utils.isXpath(test.locator):
 						element = parse_utils.getElement(test.locator, tree)[0]
@@ -96,6 +102,9 @@ def processTests(testList, tree, view, file):
 					checkClickWaitTarget(test, tree, view)
 			elif test.__class__.__name__ == "click":
 				if not parse_utils.verifyLocator(test.locator, tree):
+					queryWarning(test, view)
+			elif test.__class__.__name__ == "type":
+				if not parse_utils.verifyType(test, tree):
 					queryWarning(test, view)
 			elif test.__class__.__name__ == "assertElementPresent":
 				element = parse_utils.getElement(test.locator, tree)

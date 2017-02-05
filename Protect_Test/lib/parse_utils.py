@@ -144,3 +144,23 @@ def isXpath(locator):
 
 def processTarget(url):
 	return url.replace("file://", "", 1)
+
+def verifyType(test, tree):
+	if isXpath(test.locator):
+		element = getElement(test.locator, tree)[0]
+	else:
+		element = getNonXPathElement(test.locator, tree)
+	if element is None:
+		#sublime.message_dialog("element of verifyType not found! " + str(element))
+		return False
+	#Element must be of type "Text"
+	if not (str(element.tag) == "textarea" or str(element.tag) == "input"):
+		#sublime.message_dialog("Not textarea or input")
+		return False
+	else:
+		if str(element.tag) == "input":
+			#Element must be of type "Text"
+			if not element.get('type').lower() == 'text':
+				#sublime.message_dialog("element has type but not text")
+				return False
+	return True 
