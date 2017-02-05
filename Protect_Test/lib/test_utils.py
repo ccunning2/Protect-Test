@@ -89,29 +89,25 @@ def processTests(testList, tree, view, file):
 		if test.warn:
 			if test.__class__.__name__ == "clickAndWait":
 				if not parse_utils.verifyLocator(test.locator, tree):
-					sublime.message_dialog("You've just made an edit that will cause your test to fail."
-					"The parser cannot find " + test.locator + ","
-					" but you may have removed another element to cause this.")
-					test.warn = False
-					test.broken = True
+					queryWarning(test,view)
 				else:
 					processForm(test.locator, tree, test, file)
 				if test.originalHREF != "" and test.warn:
-					checkClickWaitTarget(test, tree)
+					checkClickWaitTarget(test, tree, view)
 			elif test.__class__.__name__ == "assertElementPresent":
 				element = parse_utils.getElement(test.locator, tree)
 				if not element:
-					queryWarning(test)
+					queryWarning(test, view)
 			elif test.__class__.__name__ == "select":
 				parse_utils.findOption(test, tree)
 				if not parse_utils.verifyLocator(test.locator, tree):
-					queryWarning(test)
+					queryWarning(test, view)
 			elif test.__class__.__name__ == "generalAssert":
 				if not parse_utils.verifyLocator(test.locator, tree):
-					queryWarning(test)
+					queryWarning(test, view)
 				element = parse_utils.getElement(test.locator, tree)[0]
 				if element.text.strip() != test.text.strip():
-					queryWarning(test)
+					queryWarning(test, view)
 			else:
 				print("Test type not implemented.")
 			
@@ -147,12 +143,15 @@ def processForm(locator, tree, test, file):
 def filePresent(path):
 	return os.path.isfile(path)
 
-def queryWarning(test):
-	answer = sublime.ok_cancel_dialog("The element pointed at " + test.locator + " has changed, potentially breaking your test. If you'd like to continue being warned about this test, hit cancel.", "Turn off warnings for this test.")
-	if answer:
+def queryWarning(test, view):
+	answer = sublime.yes_no_cancel_dialog("The element pointed at " + test.locator + " has changed, potentially breaking your test. If you'd like to continue being warned about this test, hit cancel.", "Turn off warnings for this test.", "Undo changes")
+	if answer == sublime.DIALOG_YES:
 		test.warn = False
+	if answer == sublime.DIALOG_NO:
+		view.run_command("undo")
+		
 
-def checkClickWaitTarget(test, tree):
+def checkClickWaitTarget(test, tree, view):
 	if test.warn:	
 		if parse_utils.isXpath(test.locator):
 			element = parse_utils.getElement(test.locator, tree)
@@ -162,11 +161,10 @@ def checkClickWaitTarget(test, tree):
 		if element is not None:
 			if element.tag == 'a' and element.get('href') is not None:
 				if test.originalHREF != parse_utils.processTarget(element.get('href')):
-					queryWarning(test)
+					queryWarning(test, view)
 			elif element.getparent().tag == 'a' and element.getparent().get('href') is not None:
 				if test.originalHREF != parse_utils.processTarget(element.getparent().get('href')):
-					answer = sublime.ok_cancel_dialog("The element pointed at " + test.locator + " has changed, potentially breaking your test. If you'd like to continue being warned about this test, hit cancel.", "Turn off warnings for this test.")
-					queryWarning(test)
+					queryWarning(test, view)
 			elif element.tag == 'input' and element.getparent().get('action') is not None:
 				#Deal with modified action attribute?
 				pass
