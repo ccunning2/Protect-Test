@@ -174,6 +174,9 @@ def checkClickWaitTarget(test, tree, view):
 			if element.tag == 'a' and element.get('href') is not None:
 				if test.originalHREF != parse_utils.processTarget(element.get('href')):
 					queryWarning(test, view)
+					test.region = None
+				else:
+					test.region = region_utils.createRegion(element, tree, view)
 			elif element.getparent().tag == 'a' and element.getparent().get('href') is not None:
 				if test.originalHREF != parse_utils.processTarget(element.getparent().get('href')):
 					queryWarning(test, view)

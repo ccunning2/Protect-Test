@@ -10,10 +10,10 @@ class CriticalRegion:
 
 
 def pointInCriticalRegion(point, view):
-	for crit_region in globals.REGION_LIST:
-		if crit_region.region.contains(point):
+	for test in globals.ACTIVE_FILE.tests:
+		if test.region is not None and test.region.contains(point):
 			print("Hovering over critical region")
-			view.show_popup(getTestHtml(crit_region), sublime.HIDE_ON_MOUSE_MOVE_AWAY, point, 700,700,None,None)
+			view.show_popup(getTestHtml(test.region), sublime.HIDE_ON_MOUSE_MOVE_AWAY, point, 700,700,None,None)
 
 def getTestHtml(crit_region):
 	test = crit_region.test

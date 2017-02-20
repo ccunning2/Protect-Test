@@ -62,18 +62,26 @@ class EditListener(sublime_plugin.EventListener):
 			print("edit listener triggered")
 			tree = parse_utils.getViewTree(view)
 			test_utils.processTests(globals.ACTIVE_FILE.tests, tree, view, globals.ACTIVE_FILE)
+			for test in globals.ACTIVE_FILE.tests:
+				if test.region is not None:
+					print(test.region)
+					view.fold(test.region)
 			
 # 	# def on_modified_async(self,view):#Each time the buffer changes due to added character
 # 	# 	if globals.LISTEN and (globals.EDIT_FILE == str(view.file_name())):
 # 	# 		region_utils.updateRegions(view)
 
 class ViewListener(sublime_plugin.ViewEventListener):
-	# def on_hover(self,point, hover_zone):
-	# 	if globals.LISTEN and (globals.EDIT_FILE == str(self.view.file_name())) and hover_zone == sublime.HOVER_TEXT:
-	# 		region_utils.pointInCriticalRegion(point, self.view)
+	def on_hover(self, point, hover_zone):
+		if globals.ACTIVE_FILE is not None:
+			print("HOVERIN -- " + str(globals.ACTIVE_FILE.path) + " --- " + self.view.file_name())
+			if globals.ACTIVE_FILE.path == self.view.file_name() and hover_zone == sublime.HOVER_TEXT:
+				print("Hover Listen Trigger")
+				region_utils.pointInCriticalRegion(point, self.view)
 
 	def on_activated_async(self):
 		globals.LISTEN = False
+		#Set globals.ACTIVE_FILE = None?
 		for protected_test in globals.PROTECTED_TESTS:
 			for file in protected_test.filesUnderTest:
 				if file.path == self.view.file_name():
