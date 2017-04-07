@@ -7,19 +7,8 @@ class SeleniumTest:
 		self.warn = True
 		self.broken = False
 		self.region = None
-	
-	#Can remove below methods as class attributes in python are public	
-	def getLocator(self):
-		return self.locator
+		self.fold = True
 
-	def getText(self):
-		return self.text
-
-	def setLocator(self, locator):
-		self.locator = locator
-
-	def setText(self, text):
-		self.text = text
 
 class clickAndWait(SeleniumTest):
 	def __init__(self, file, line, locator, text):

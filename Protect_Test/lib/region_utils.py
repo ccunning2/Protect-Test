@@ -13,11 +13,46 @@ def pointInCriticalRegion(point, view):
 	for test in globals.ACTIVE_FILE.tests:
 		if test.region is not None and test.region.contains(point):
 			print("Hovering over critical region")
-			view.show_popup(getTestHtml(test), sublime.HIDE_ON_MOUSE_MOVE_AWAY, point, 700,700,None,None)
+			view.show_popup(getTestHtml(test), sublime.HIDE_ON_MOUSE_MOVE_AWAY, point, 700,700,disableFolding,None)
 
 def getTestHtml(test):
-	html = "<html><body><h3>Test Info:</h3><ul><li>Test Type: " + test.__class__.__name__ + "</li><li>Test Locator: " + test.locator + "</li><li>Test File: " + test.file.path + "</li><li>Line Number: " + str(test.line) + "</li><li>Test Broken: " + str(test.broken) + "</li></ul></body></html>"
+	if test.fold:
+		html = "" + \
+		"<html>" + \
+		"<body>" + \
+			"<h3>Test Info:</h3>" + \
+			"<ul>" + \
+				"<li>Test Type: " + test.__class__.__name__ + "</li>" + \
+				"<li>Test Locator: " + test.locator + "</li>" + \
+				"<li>Test File: " + test.file.path + "</li>" + \
+				"<li>Line Number: " + str(test.line) + "</li>" + \
+				"<li>Test Broken: " + str(test.broken) + "</li>" + \
+			"</ul>" + \
+		"<h5>To disable folding for this test, <a href=\"" + str(test) + "\">click here</a></h5>" + \
+		"</body>" + \
+		"</html>"
+	else:
+		html = "" + \
+		"<html>" + \
+		"<body>" + \
+			"<h3>Test Info:</h3>" + \
+			"<ul>" + \
+				"<li>Test Type: " + test.__class__.__name__ + "</li>" + \
+				"<li>Test Locator: " + test.locator + "</li>" + \
+				"<li>Test File: " + test.file.path + "</li>" + \
+				"<li>Line Number: " + str(test.line) + "</li>" + \
+				"<li>Test Broken: " + str(test.broken) + "</li>" + \
+			"</ul>" + \
+		"<h5>To enable folding for this test, <a href=\"" + str(test) + "\">click here</a></h5>" + \
+		"</body>" + \
+		"</html>"
 	return html
+
+def disableFolding(test_to_disable):
+	for test in globals.ACTIVE_FILE.tests:
+		if str(test) == str(test_to_disable):
+			test.fold = not test.fold
+			#Unfold Region here?
 
 # def getRegionByLines(line1, line2, view): #Returns the region starting at the beginning of line1 and the end of line 2 
 # 	a = view.text_point(line1-1, 0)
@@ -40,13 +75,24 @@ def createRegion(element, etree, view):
 	tag = element.tag
 	closeTag = "</" + tag + ">"
 	openTag = "<" + tag 
+	noCloseEnd = ">"
 	startPos1 = view.text_point(beginLine-1, 0)
 	openTagRegion = view.find(openTag, startPos1, sublime.IGNORECASE)
 	startPos2 = openTagRegion.b
-	closeTagRegion = view.find(closeTag, startPos2, sublime.IGNORECASE)
+	if tag in globals.NO_CLOSE_TAG:
+		closeTagRegion = view.find(noCloseEnd, startPos2, sublime.IGNORECASE)
+	else:
+		closeTagRegion = view.find(closeTag, startPos2, sublime.IGNORECASE)
 	regionBegin = openTagRegion.a
 	regionEnd = closeTagRegion.b
 	return sublime.Region(regionBegin, regionEnd)
+
+def setRegion(test, tree, view):
+	element = parse_utils.getElement(test.locator, tree)
+	if element is not None:
+		test.region = createRegion(element, tree, view)
+	else:
+		sublime.error_message("Could not locate element at: " + test.locator)
 
 def updateRegions(view):
 	tree = parse_utils.getViewTree(view)

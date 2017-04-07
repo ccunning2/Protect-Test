@@ -103,17 +103,25 @@ def processTests(testList, tree, view, file):
 			elif test.__class__.__name__ == "click":
 				if not parse_utils.verifyLocator(test.locator, tree):
 					queryWarning(test, view)
+				else:
+					region_utils.setRegion(test, tree, view)
 			elif test.__class__.__name__ == "type":
 				if not parse_utils.verifyType(test, tree):
 					queryWarning(test, view)
+				else:
+					region_utils.setRegion(test, tree, view)
 			elif test.__class__.__name__ == "assertElementPresent":
 				element = parse_utils.getElement(test.locator, tree)
 				if not element:
 					queryWarning(test, view)
+				else:
+					region_utils.setRegion(test, tree, view)
 			elif test.__class__.__name__ == "select":
 				parse_utils.findOption(test, tree)
 				if not parse_utils.verifyLocator(test.locator, tree):
 					queryWarning(test, view)
+				else:
+					region_utils.setRegion(test, tree, view)
 			elif test.__class__.__name__ == "generalAssert":
 				if not parse_utils.verifyLocator(test.locator, tree):
 					queryWarning(test, view)
@@ -180,6 +188,8 @@ def checkClickWaitTarget(test, tree, view):
 			elif element.getparent().tag == 'a' and element.getparent().get('href') is not None:
 				if test.originalHREF != parse_utils.processTarget(element.getparent().get('href')):
 					queryWarning(test, view)
+				else:
+					test.region = region_utils.createRegion(element.getparent(), tree, view)
 			elif element.tag == 'input' and element.getparent().get('action') is not None:
 				#Deal with modified action attribute?
 				pass

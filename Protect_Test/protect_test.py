@@ -62,10 +62,13 @@ class EditListener(sublime_plugin.EventListener):
 			print("edit listener triggered")
 			tree = parse_utils.getViewTree(view)
 			test_utils.processTests(globals.ACTIVE_FILE.tests, tree, view, globals.ACTIVE_FILE)
+			print(globals.ACTIVE_FILE.tests)
 			for test in globals.ACTIVE_FILE.tests:
 				if test.region is not None:
-					print(test.region)
-					view.fold(test.region)
+					if test.fold:
+						view.fold(test.region)
+					else:
+						view.unfold(test.region)
 			
 # 	# def on_modified_async(self,view):#Each time the buffer changes due to added character
 # 	# 	if globals.LISTEN and (globals.EDIT_FILE == str(view.file_name())):
