@@ -11,3 +11,4 @@ IGNORE_TESTS = ["open", "pause"]
 ORIGINAL_FORM = None
 NO_CLOSE_TAG = ['input', 'img']
 # TESTED_FILES = []
+DEBUG = True

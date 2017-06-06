@@ -71,6 +71,8 @@ def disableFolding(test_to_disable):
 # 	return regions
 
 def createRegion(element, etree, view):
+	if globals.DEBUG:
+		print("In create Region")
 	beginLine = element.sourceline
 	tag = element.tag
 	closeTag = "</" + tag + ">"
@@ -88,11 +90,16 @@ def createRegion(element, etree, view):
 	return sublime.Region(regionBegin, regionEnd)
 
 def setRegion(test, tree, view):
-	element = parse_utils.getElement(test.locator, tree)
+	element = parse_utils.getElement(test.locator, tree)[0]
+	print('setRegion ***' + str(element))
+	print(element.text)
 	if element is not None:
 		test.region = createRegion(element, tree, view)
 	else:
 		sublime.error_message("Could not locate element at: " + test.locator)
+	if globals.DEBUG:
+		print(test.locator)
+		print(test.region)
 
 def updateRegions(view):
 	tree = parse_utils.getViewTree(view)

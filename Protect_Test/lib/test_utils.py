@@ -82,10 +82,15 @@ def verifyTestsInitial():
 						sublime.message_dialog("Test " + test.locator + " is broken from file " + file.path)
 				else:
 					if parse_utils.isXpath(test.locator):
-						element = parse_utils.getElement(test.locator, tree)[0]
+						element = parse_utils.getElement(test.locator, tree)
+						if type(element) is list:
+							print(str(element))
+							element = element[0]
 					else:
 						element = parse_utils.getNonXPathElement(test.locator, tree)
-					# region = region_utils.createRegion(element, tree, view)
+						if type(element) is list:
+							element = element[0]
+					# test.region = region_utils.createRegion(element, tree, view)
 					# region = region_utils.CriticalRegion(region, test, view)
 					# globals.REGION_LIST.append(region)
 
@@ -100,6 +105,7 @@ def processTests(testList, tree, view, file):
 					processForm(test.locator, tree, test, file)
 				if test.originalHREF != "" and test.warn:
 					checkClickWaitTarget(test, tree, view)
+				region_utils.setRegion(test,tree,view) #Watch me
 			elif test.__class__.__name__ == "click":
 				if not parse_utils.verifyLocator(test.locator, tree):
 					queryWarning(test, view)
@@ -123,11 +129,19 @@ def processTests(testList, tree, view, file):
 				else:
 					region_utils.setRegion(test, tree, view)
 			elif test.__class__.__name__ == "generalAssert":
-				if not parse_utils.verifyLocator(test.locator, tree):
+				try:
+					element = parse_utils.getElement(test.locator, tree)[0]
+				except IndexError:
 					queryWarning(test, view)
-				element = parse_utils.getElement(test.locator, tree)[0]
+					continue
 				if element.text.strip() != test.text.strip():
 					queryWarning(test, view)
+					continue
+				if not parse_utils.verifyLocator(test.locator, tree):
+					queryWarning(test, view)
+					continue
+				else:
+					region_utils.setRegion(test, tree, view)
 			else:
 				print("Test type not implemented.")
 			
@@ -167,6 +181,7 @@ def queryWarning(test, view):
 	answer = sublime.yes_no_cancel_dialog("The element pointed at " + test.locator + " has changed, potentially breaking your test. If you'd like to continue being warned about this test, hit cancel.", "Turn off warnings for this test.", "Undo changes")
 	if answer == sublime.DIALOG_YES:
 		test.warn = False
+		test.broken = True
 	if answer == sublime.DIALOG_NO:
 		view.run_command("undo")
 		
@@ -192,6 +207,7 @@ def checkClickWaitTarget(test, tree, view):
 					test.region = region_utils.createRegion(element.getparent(), tree, view)
 			elif element.tag == 'input' and element.getparent().get('action') is not None:
 				#Deal with modified action attribute?
+				region_utils.setRegion(test, tree, view)
 				pass
 			else:
 				print("Could not locate element")

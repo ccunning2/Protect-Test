@@ -37,12 +37,14 @@ def compareForms(list1):
 	print("IN COMPARE FORMS!!!\n")
 	for selector in list1:
 		print("Selector: " + str(selector) + "\n")
-		if selector not in globals.ORIGINAL_FORM and selector not in globals.ELEMENTS_WARNED:
+		if (globals.ORIGINAL_FORM is None) or (selector not in globals.ORIGINAL_FORM and selector not in globals.ELEMENTS_WARNED):
 			print("ALERT-- New Required Field")
 			sublime.message_dialog("You just added a required field that will break your test unless you modify it.")
 			globals.ELEMENTS_WARNED.append(selector)
 
 def getXPathElement(XPath, tree):
+	if globals.DEBUG:
+		print('In getXpathElement' + XPath)
 	return tree.xpath(XPath)
 
 def getElement(locator, tree):
@@ -92,12 +94,17 @@ def getName(name, tree): #Returns the first element with the 'name' attribute pr
 
 def findOption(test, tree):
 	select = getElement(test.locator, tree)[0]
+	print('IN FIND OPTION')
+	print(select)
 	it = select.iterdescendants()
 	for element in it:
+		print('Element text' + str(element.text))
+		print('Test label ' + str(test.label))
 		if element.text == test.label:
 			return select  #Returning the element here for use with the regions
 	sublime.message_dialog("You just removed an option that will break your test!")
 	test.warn = False
+	test.broken = True
 	return select
 
 def verifyLocator(locator, tree): #Checks to see if element pointed to by locator is present
@@ -119,6 +126,9 @@ def getClickWaitTarget(test, tree):
 	else:
 		element = getNonXPathElement(test.locator, tree)
 
+	if type(element) is list:
+		element = element[0]
+
 	if element is not None:
 		if element.tag == 'a' and element.get('href') is not None:
 			test.originalHREF = processTarget(element.get('href'))
@@ -136,11 +146,12 @@ def getClickWaitTarget(test, tree):
 		print("Element not located")
 
 def isXpath(locator):
-	xPathPattern = '^//(\S+/?)*$'
-	if re.match(xPathPattern, locator):
-		return True
-	else:
-		return False
+	# xPathPattern = '^//(\S+/?)*$'
+	# if re.match(xPathPattern, locator):
+	# 	return True
+	# else:
+	# 	return False
+	return True #Hack
 
 def processTarget(url):
 	return url.replace("file://", "", 1)
