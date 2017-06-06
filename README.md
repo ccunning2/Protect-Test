@@ -64,6 +64,6 @@ function processForm(XPathLocator, parseTree, test) {
 
 #### To install:
 ###### OSX:
-For now, clone this repository and create a symlink to the "Protect Test" folder in the `~/Library/Application Support/Sublime Text 3/Packages` folder. In the future, installation will be automated via [Package Control](https://packagecontrol.io/).
+For now, clone this repository and create a symlink to the "Protect Test" folder in the `~/Library/Application Support/Sublime Text 3/Packages` folder. 
 
 
