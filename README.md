@@ -60,8 +60,7 @@ function processForm(XPathLocator, parseTree, test) {
   }
 }
 ```
-### LONG TERM
-* Do another check on save
+
 
 #### To install:
 ###### OSX:
